@@ -1,36 +1,189 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tracker
 
-## Getting Started
+[Прототипи Figma](https://www.figma.com/design/VDtvtPvAQy2ZwdxDJjMHTx/Tracker-%E2%80%94-Interactive-Prototype?node-id=0-1) · [Бэкенд](https://github.com/Amsurur/task-management-backend)
 
-First, run the development server:
+## Архитектура
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+Tracker-Interactive-Prototype/
+├── .agent/
+│   └── progress.md
+├── app/
+│   ├── (access)/
+│   │   ├── invitations/
+│   │   │   └── [token]/
+│   │   │       ├── invitation.tsx
+│   │   │       ├── page-translations.json
+│   │   │       └── page.tsx
+│   │   ├── sign-in/
+│   │   │   ├── page-translations.json
+│   │   │   ├── page.tsx
+│   │   │   └── sign-in.tsx
+│   │   └── sign-up/
+│   │       ├── page-translations.json
+│   │       ├── page.tsx
+│   │       └── sign-up.tsx
+│   ├── (tracker)/
+│   │   ├── profile/
+│   │   │   ├── page-translations.json
+│   │   │   ├── page.tsx
+│   │   │   └── profile.tsx
+│   │   └── workspaces/
+│   │       ├── [workspaceId]/
+│   │       │   ├── my-tasks/
+│   │       │   │   ├── created/
+│   │       │   │   │   ├── created-by-me.tsx
+│   │       │   │   │   ├── page-translations.json
+│   │       │   │   │   └── page.tsx
+│   │       │   │   ├── my-tasks.tsx
+│   │       │   │   ├── page-translations.json
+│   │       │   │   └── page.tsx
+│   │       │   ├── notifications/
+│   │       │   │   ├── unread/
+│   │       │   │   │   ├── page-translations.json
+│   │       │   │   │   ├── page.tsx
+│   │       │   │   │   └── unread-notifications.tsx
+│   │       │   │   ├── notifications.tsx
+│   │       │   │   ├── page-translations.json
+│   │       │   │   └── page.tsx
+│   │       │   ├── projects/
+│   │       │   │   ├── [projectId]/
+│   │       │   │   │   ├── cycles/
+│   │       │   │   │   │   ├── [cycleId]/
+│   │       │   │   │   │   │   ├── cycle-detail.tsx
+│   │       │   │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   │   └── page.tsx
+│   │       │   │   │   │   ├── dialogs/
+│   │       │   │   │   │   │   └── new-cycle-dialog.tsx
+│   │       │   │   │   │   ├── cycles.tsx
+│   │       │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   └── page.tsx
+│   │       │   │   │   ├── modules/
+│   │       │   │   │   │   ├── [moduleId]/
+│   │       │   │   │   │   │   ├── module-detail.tsx
+│   │       │   │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   │   └── page.tsx
+│   │       │   │   │   │   ├── dialogs/
+│   │       │   │   │   │   │   └── new-module-dialog.tsx
+│   │       │   │   │   │   ├── modules.tsx
+│   │       │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   └── page.tsx
+│   │       │   │   │   ├── settings/
+│   │       │   │   │   │   ├── labels/
+│   │       │   │   │   │   │   ├── dialogs/
+│   │       │   │   │   │   │   │   └── new-label-dialog.tsx
+│   │       │   │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   │   ├── page.tsx
+│   │       │   │   │   │   │   └── project-labels.tsx
+│   │       │   │   │   │   ├── members/
+│   │       │   │   │   │   │   ├── dialogs/
+│   │       │   │   │   │   │   │   └── add-project-member-dialog.tsx
+│   │       │   │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   │   ├── page.tsx
+│   │       │   │   │   │   │   └── project-members.tsx
+│   │       │   │   │   │   ├── statuses/
+│   │       │   │   │   │   │   ├── dialogs/
+│   │       │   │   │   │   │   │   └── new-status-dialog.tsx
+│   │       │   │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   │   ├── page.tsx
+│   │       │   │   │   │   │   └── project-statuses.tsx
+│   │       │   │   │   │   ├── page-translations.json
+│   │       │   │   │   │   ├── page.tsx
+│   │       │   │   │   │   └── project-settings.tsx
+│   │       │   │   │   └── tasks/
+│   │       │   │   │       ├── [taskId]/
+│   │       │   │   │       │   ├── page-translations.json
+│   │       │   │   │       │   ├── page.tsx
+│   │       │   │   │       │   └── task-detail.tsx
+│   │       │   │   │       ├── board/
+│   │       │   │   │       │   ├── board.tsx
+│   │       │   │   │       │   ├── page-translations.json
+│   │       │   │   │       │   └── page.tsx
+│   │       │   │   │       ├── calendar/
+│   │       │   │   │       │   ├── calendar.tsx
+│   │       │   │   │       │   ├── page-translations.json
+│   │       │   │   │       │   └── page.tsx
+│   │       │   │   │       ├── dialogs/
+│   │       │   │   │       │   ├── new-task-dialog.tsx
+│   │       │   │   │       │   └── task-detail-sheet.tsx
+│   │       │   │   │       ├── table/
+│   │       │   │   │       │   ├── page-translations.json
+│   │       │   │   │       │   ├── page.tsx
+│   │       │   │   │       │   └── table.tsx
+│   │       │   │   │       ├── page-translations.json
+│   │       │   │   │       ├── page.tsx
+│   │       │   │   │       └── task-list.tsx
+│   │       │   │   ├── archived/
+│   │       │   │   │   ├── archived-projects.tsx
+│   │       │   │   │   ├── page-translations.json
+│   │       │   │   │   └── page.tsx
+│   │       │   │   ├── dialogs/
+│   │       │   │   │   └── new-project-dialog.tsx
+│   │       │   │   ├── page-translations.json
+│   │       │   │   ├── page.tsx
+│   │       │   │   └── projects.tsx
+│   │       │   └── settings/
+│   │       │       ├── members/
+│   │       │       │   ├── dialogs/
+│   │       │       │   │   └── invite-member-dialog.tsx
+│   │       │       │   ├── page-translations.json
+│   │       │       │   ├── page.tsx
+│   │       │       │   └── workspace-members.tsx
+│   │       │       ├── page-translations.json
+│   │       │       ├── page.tsx
+│   │       │       └── workspace-settings.tsx
+│   │       └── new/
+│   │           ├── create-workspace.tsx
+│   │           ├── page-translations.json
+│   │           └── page.tsx
+│   ├── favicon.ico
+│   ├── globals.css
+│   └── layout.tsx
+├── components/
+│   └── ui/
+│       ├── button.tsx
+│       ├── dialog.tsx
+│       └── sheet.tsx
+├── dev1/
+│   └── README.md
+├── dev2/
+│   └── README.md
+├── lib/
+│   └── utils.ts
+├── .gitignore
+├── AGENTS.md
+├── components.json
+├── eslint.config.mjs
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── README.md
+├── SCAFFOLD-PROMPT.md
+└── tsconfig.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `(access)` ва `(tracker)` гурӯҳҳои Next.js мебошанд. Ба URL дохил намешаванд. Масалан, [`profile.tsx`](app/%28tracker%29/profile/profile.tsx) аз `/profile` кушода мешавад.
+- `page.tsx` маршрутро ба компоненти ҳамон папка мепайвандад. Компонентро дар файли номдори саҳифа таҳрир кун. Барои тарҷумаҳо `page-translations.json` бо калидҳои `en`, `tg` ва `ru` аст.
+- Диалог ва панели ҷузъиёт дар `dialogs/` назди экрани худанд. Button, Dialog ва Sheet-и умумӣ дар [`components/ui/`](components/ui/) ҳастанд.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Дар API-и бэкенд роҳҳои workspace аз `workspaceSlug` истифода мебаранд. Вазифаҳои фронтенд ба `issues`, статусҳо ба `states` ва даъватҳо ба `invites` мувофиқанд. Swagger-и бэкенд дар `/docs` дастрас аст. [Масирҳои API](https://github.com/Amsurur/task-management-backend/blob/main/src/app.ts)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Тақсимоти кор
 
-## Learn More
+| Шоха | Вазифа | Файлҳо |
+| --- | --- | --- |
+| `dev1` | Воридшавӣ, сабти ном, профил, My Tasks ва экранҳои вазифаҳо | [Рӯйхати файлҳои dev1](dev1/README.md) |
+| `dev2` | Workspace, даъватҳо, проектҳо, давраҳо, модулҳо ва огоҳиномаҳо | [Рӯйхати файлҳои dev2](dev2/README.md) |
 
-To learn more about Next.js, take a look at the following resources:
+Ҳар кас дар шохаи худ кор мекунад ва ба `main` Pull Request мекушояд. Барои тағйири layout, CSS ё ҷузъҳои умумӣ аввал бо ҳам мувофиқа кунед.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Оғоз
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Бо Node.js 22 ё навтар:
 
-## Deploy on Vercel
+```bash
+npm ci
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Пеш аз Pull Request `npm run check`-ро иҷро кун.
