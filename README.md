@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tracker
 
-## Getting Started
+## Дар куҷо кор кунам?
 
-First, run the development server:
+**Барои сохтани профил** [`profile.tsx`](app/profile/profile.tsx)-ро кушоед. **Барои навиштани матни профил** [`page-translations.json`](app/profile/page-translations.json)-ро кушоед.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+app/
+└── profile/
+    ├── profile.tsx             ← компоненти саҳифа
+    ├── page-translations.json  ← ҷойи матнҳои ҳамин саҳифа
+    └── page.tsx                ← файлест, ки Next.js аз он /profile-ро мекушояд
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Дар файли матн `en` барои англисӣ, `tg` барои тоҷикӣ ва `ru` барои русӣ аст. Ҳар се ҷой холӣ ва барои пур кардан омодаанд.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Саҳифа ва зерсаҳифа
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Саҳифаҳоро аз `app/` ёбед. Дар VS Code метавонед `Ctrl+P` занед ва номи файлро нависед, масалан `task-list.tsx`.
 
-## Learn More
+```text
+tasks/
+├── task-list.tsx
+├── page.tsx
+├── page-translations.json
+├── board/
+│   ├── board.tsx
+│   ├── page.tsx
+│   └── page-translations.json
+└── dialogs/
+    └── new-task-dialog.tsx
+```
 
-To learn more about Next.js, take a look at the following resources:
+Board зерсаҳифаи Tasks аст, барои ҳамин папкааш дар дохили `tasks/` аст. Барои сохтани саҳифаи нав папкаи `profile/`-ро ҳамчун намуна гиред. Номи папка, файли компонент ва функсияи дохили онро иваз кунед ва номи навро дар сатри ягонаи `page.tsx` гузоред.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Button, Dialog ва Sheet-и shadcn/ui дар [`components/ui/`](components/ui/) ҳастанд.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Кори дунафара
 
-## Deploy on Vercel
+- [Dev 1](dev1/README.md) — воридшавӣ, сабти ном, профил ва вазифаҳо.
+- [Dev 2](dev2/README.md) — workspace, даъват, проект, давра, модул ва огоҳинома.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Ҳар кас файли нишондодашударо дар branch-и худаш таҳрир мекунад ва ба `main` Pull Request мекушояд. Барои `app/layout.tsx`, `components/ui/`, CSS ва config аввал мувофиқат кунед ва PR-и ҷудо кушоед.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Бо як дизайни Figma frontend созед. Backend алоҳида дода мешавад. Dev 1 менюи профил ва рӯйхати вазифаҳоро омода мекунад. Dev 2 ҷойи workspace switcher ва тугмаи огоҳиномаро дар layout мувофиқа мекунад. Барои давра ва модул рӯйхати вазифаҳои Dev 1-ро истифода баред. [Тақсимоти устод](https://claude.ai/artifact/6mxK1rbhKEBS64CCsX5HNF#a779056c-3163)
+
+## Оғоз
+
+Бо Node.js 22 ё навтар дар терминали проект `npm ci` ва баъд `npm run dev`-ро иҷро кунед. Барои дидани каркаси профил [`/profile`](http://localhost:3000/profile)-ро кушоед. Пеш аз фиристодани тағйирот `npm run check`-ро иҷро кунед.
+
+[Прототип дар Figma](https://www.figma.com/design/VDtvtPvAQy2ZwdxDJjMHTx/Tracker-%E2%80%94-Interactive-Prototype?node-id=0-1) · [Промпти омода](SCAFFOLD-PROMPT.md)
