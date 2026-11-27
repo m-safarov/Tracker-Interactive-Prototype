@@ -1,99 +1,49 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { QueryClient, useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { configureStore } from "@reduxjs/toolkit";
 import { cn } from "cn";
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { Label } from "radix-ui";
-import { useState, type ComponentProps } from "react";
-import { useForm } from "react-hook-form";
+import { useState, type ComponentProps, type ReactNode } from "react";
+import { Provider } from "react-redux";
 import { create } from "zustand";
 
 import { Button } from "@/components/ui/button";
-import { formSchemas, type AuthFormValues, type LoginBody, type RegisterBody } from "./schema";
+import { authApi } from "./auth-api";
 
-type AuthResponse = { destination: string };
-
-// Ду дархости API барои воридшавӣ ва сабти ном.
-const authApi = {
-  login(body: LoginBody) {
-    return axios.post<AuthResponse>("/api/auth/login", body);
-  },
-
-  register(body: RegisterBody) {
-    return axios.post<AuthResponse>("/api/auth/register", body);
-  },
-};
-
-type ApiError = { error?: { message?: string; field?: "email" } };
-
-const useDraftEmail = create<{ email: string; saveEmail: (email: string) => void }>((set) => ({
+export const useDraftEmail = create<{ email: string; saveEmail: (email: string) => void }>((set) => ({
   email: "",
   saveEmail: (email) => set({ email }),
 }));
 
-export function AuthScreen({ mode }: { mode: "login" | "register" }) {
-  const isRegister = mode === "register";
-  const title = isRegister ? "Create account" : "Sign in";
-  const { email, saveEmail } = useDraftEmail();
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [store] = useState(() =>
+    configureStore({
+      reducer: { [authApi.reducerPath]: authApi.reducer },
+      middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(authApi.middleware),
+      devTools: false,
+    }),
+  );
 
-  // 1. Zod майдонҳои формаро месанҷад.
-  const { register, handleSubmit, setError, formState } = useForm({
-    resolver: zodResolver(formSchemas[mode]),
-    defaultValues: { display_name: "", email, password: "" },
-  });
-  const { errors, isSubmitting } = formState;
+  return <Provider store={store}>{children}</Provider>;
+}
 
-  // 2. TanStack Query маълумоти санҷидашударо ба API мефиристад.
-  const [queryClient] = useState(() => new QueryClient());
-  const auth = useMutation({
-    gcTime: 0,
-    networkMode: "always",
-    mutationFn: (values: AuthFormValues) => {
-      const query = new URLSearchParams(window.location.search);
-      const credentials = { email: values.email, password: values.password };
+type AuthLayoutProps = {
+  title: string;
+  className: string;
+  linkHref: string;
+  linkText: string;
+  children: ReactNode;
+};
 
-      if (isRegister) {
-        return authApi.register({
-          ...credentials,
-          display_name: values.display_name,
-          invite_token: query.get("invite")?.trim() || undefined,
-        });
-      }
-
-      return authApi.login({ ...credentials, next: query.get("next") ?? undefined });
-    },
-  }, queryClient);
-
-  // 3. Дар ҳолати муваффақият ба саҳифаи лозимӣ мегузарем.
-  async function submitForm(values: AuthFormValues) {
-    saveEmail(values.email);
-
-    try {
-      const response = await auth.mutateAsync(values);
-      window.location.replace(response.data.destination);
-    } catch (error) {
-      const apiError = axios.isAxiosError<ApiError>(error) ? error.response?.data?.error : undefined;
-      const message = apiError?.message ?? "Could not connect to Tracker. Please try again.";
-
-      if (apiError?.field === "email") {
-        setError("email", { message }, { shouldFocus: true });
-      } else {
-        setError("root.server", { message });
-      }
-    } finally {
-      auth.reset();
-    }
-  }
-
+export function AuthLayout({ title, className, linkHref, linkText, children }: AuthLayoutProps) {
   return (
     <main
       className={cn(
         "relative flex min-h-dvh items-center justify-center bg-background px-6 pb-[124px] font-[family-name:Inter,Arial,sans-serif] tracking-[0.15px] text-foreground",
         "[--border:#e6e6e9] [--foreground:#1c1d21] [--input:#e6e6e9] [--primary:#3b5bdb] [--primary-foreground:#fff] [--radius:6px] [--ring:#3b5bdb]",
-        isRegister ? "pt-[100px]" : "pt-20",
+        className,
       )}
     >
       <LanguageSelect />
@@ -101,65 +51,20 @@ export function AuthScreen({ mode }: { mode: "login" | "register" }) {
         <p className="text-xl leading-6 font-semibold">Tracker</p>
         <h1 id="auth-heading" className="mt-5 text-base leading-5 font-semibold">{title}</h1>
 
-        <form method="post" onSubmit={handleSubmit(submitForm)} className="mt-4" noValidate>
-          <div className="grid gap-3">
-            {isRegister && (
-              <FormField
-                {...register("display_name")}
-                id="auth-name"
-                label="Name"
-                autoComplete="name"
-                autoFocus
-                required
-                error={errors.display_name?.message}
-              />
-            )}
-            <FormField
-              {...register("email")}
-              id="auth-email"
-              label="Email"
-              type="email"
-              autoComplete="username"
-              autoFocus={!isRegister}
-              placeholder={isRegister ? undefined : "farrukh@example.com"}
-              required
-              error={errors.email?.message}
-            />
-            <FormField
-              {...register("password")}
-              id="auth-password"
-              label="Password"
-              type="password"
-              autoComplete={isRegister ? "new-password" : "current-password"}
-              placeholder={isRegister ? undefined : "••••••••"}
-              className="placeholder:tracking-[2px]"
-              required
-              error={errors.password?.message}
-            />
-          </div>
-
-          {errors.root?.server?.message && (
-            <p role="alert" className="mt-3 text-sm text-destructive">{errors.root.server.message}</p>
-          )}
-          <Button type="submit" disabled={isSubmitting} className="mt-4 w-full border-0 text-[13.5px]">
-            {isSubmitting ? (isRegister ? "Creating account…" : "Signing in…") : title}
-          </Button>
-        </form>
+        {children}
 
         <Button asChild variant="link" className="mt-5 h-auto self-start border-0 p-0 text-[13.5px] leading-4 font-normal">
-          <Link href={isRegister ? "/login" : "/register"}>
-            {isRegister ? "Sign in" : "Create account"}
-          </Link>
+          <Link href={linkHref}>{linkText}</Link>
         </Button>
       </section>
     </main>
   );
 }
 
-// Майдони shadcn/ui бо ном ва паёми хато.
+
 type FormFieldProps = ComponentProps<"input"> & { id: string; label: string; error?: string };
 
-function FormField({ id, label, error, className, ...props }: FormFieldProps) {
+export function FormField({ id, label, error, className, ...props }: FormFieldProps) {
   const errorId = id + "-error";
   return (
     <div className="grid gap-2">

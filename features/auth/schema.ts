@@ -18,14 +18,8 @@ export const registerRequestSchema = registerSchema.extend({
   invite_token: z.uuid("This invitation link is invalid.").optional(),
 });
 
-export const formSchemas = {
-  login: loginSchema.extend({ display_name: z.string() }),
-  register: registerSchema,
-};
-
 export type LoginBody = z.infer<typeof loginRequestSchema>;
 export type RegisterBody = z.infer<typeof registerRequestSchema>;
-export type AuthFormValues = z.infer<typeof registerSchema>;
 
 const photoUrl = z.url({ protocol: /^https?$/, error: "Enter a valid photo URL." });
 
