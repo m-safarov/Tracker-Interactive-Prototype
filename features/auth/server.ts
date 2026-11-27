@@ -15,16 +15,25 @@ export type TokenPair = {
   refresh_token: string;
 };
 
-export function setSessionCookies(request: NextRequest, response: NextResponse, tokens: TokenPair) {
-  const options = {
+function sessionCookieOptions(request: NextRequest) {
+  return {
     httpOnly: true,
     sameSite: "lax",
     secure: request.nextUrl.protocol === "https:",
     path: "/",
   } as const;
+}
 
+export function setSessionCookies(request: NextRequest, response: NextResponse, tokens: TokenPair) {
+  const options = sessionCookieOptions(request);
   response.cookies.set(accessCookie, tokens.access_token, options);
   response.cookies.set(refreshCookie, tokens.refresh_token, options);
+}
+
+export function clearSessionCookies(request: NextRequest, response: NextResponse) {
+  const options = { ...sessionCookieOptions(request), maxAge: 0 };
+  response.cookies.set(accessCookie, "", options);
+  response.cookies.set(refreshCookie, "", options);
 }
 
 export function workspaceProjects(slug: string) {
