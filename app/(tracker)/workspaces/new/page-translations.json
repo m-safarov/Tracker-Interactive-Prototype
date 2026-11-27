@@ -1,5 +1,20 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "title": "Create workspace",
+    "name": "Name",
+    "address": "Address",
+    "create": "Create workspace"
+  },
+  "tg": {
+    "title": "Сохтани workspace",
+    "name": "Ном",
+    "address": "Суроға",
+    "create": "Сохтани workspace"
+  },
+  "ru": {
+    "title": "Создать workspace",
+    "name": "Название",
+    "address": "Адрес",
+    "create": "Создать workspace"
+  }
 }

@@ -1,5 +1,17 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "modules": "Modules",
+    "inProgress": "In progress",
+    "backlog": "Backlog"
+  },
+  "tg": {
+    "modules": "Модулҳо",
+    "inProgress": "Дар ҷараён",
+    "backlog": "Backlog"
+  },
+  "ru": {
+    "modules": "Модули",
+    "inProgress": "В работе",
+    "backlog": "Бэклог"
+  }
 }

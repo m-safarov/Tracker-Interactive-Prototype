@@ -1,5 +1,20 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "cycles": "Cycles",
+    "active": "Active",
+    "upcoming": "Upcoming",
+    "completed": "Completed"
+  },
+  "tg": {
+    "cycles": "Давраҳо",
+    "active": "Фаъол",
+    "upcoming": "Оянда",
+    "completed": "Тамомшуда"
+  },
+  "ru": {
+    "cycles": "Циклы",
+    "active": "Активные",
+    "upcoming": "Предстоящие",
+    "completed": "Завершённые"
+  }
 }

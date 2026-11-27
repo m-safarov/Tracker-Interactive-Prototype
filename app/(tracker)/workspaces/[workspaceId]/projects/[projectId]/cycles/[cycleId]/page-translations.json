@@ -1,5 +1,14 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "cycles": "Cycles",
+    "addTasks": "Add tasks"
+  },
+  "tg": {
+    "cycles": "Давраҳо",
+    "addTasks": "Илова кардани вазифаҳо"
+  },
+  "ru": {
+    "cycles": "Циклы",
+    "addTasks": "Добавить задачи"
+  }
 }

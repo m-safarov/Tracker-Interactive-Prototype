@@ -1,5 +1,23 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "notifications": "Notifications",
+    "markAll": "Mark all as read",
+    "all": "All",
+    "unread": "Unread",
+    "empty": "No unread notifications."
+  },
+  "tg": {
+    "notifications": "Огоҳиномаҳо",
+    "markAll": "Ҳамаро хондашуда кардан",
+    "all": "Ҳама",
+    "unread": "Хонданашуда",
+    "empty": "Огоҳиномаи хонданашуда нест."
+  },
+  "ru": {
+    "notifications": "Уведомления",
+    "markAll": "Прочитать все",
+    "all": "Все",
+    "unread": "Непрочитанные",
+    "empty": "Нет непрочитанных уведомлений."
+  }
 }

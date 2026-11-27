@@ -1,5 +1,29 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "settings": "Settings",
+    "title": "Project settings",
+    "general": "General",
+    "members": "Members",
+    "statuses": "Statuses",
+    "labels": "Labels",
+    "remove": "Remove from project"
+  },
+  "tg": {
+    "settings": "Танзимот",
+    "title": "Танзимоти проект",
+    "general": "Умумӣ",
+    "members": "Аъзо",
+    "statuses": "Статусҳо",
+    "labels": "Нишонаҳо",
+    "remove": "Хориҷ кардан аз проект"
+  },
+  "ru": {
+    "settings": "Настройки",
+    "title": "Настройки проекта",
+    "general": "Общие",
+    "members": "Участники",
+    "statuses": "Статусы",
+    "labels": "Метки",
+    "remove": "Удалить из проекта"
+  }
 }

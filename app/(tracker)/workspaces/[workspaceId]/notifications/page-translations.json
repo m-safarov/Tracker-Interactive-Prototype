@@ -1,5 +1,20 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "notifications": "Notifications",
+    "markAll": "Mark all as read",
+    "all": "All",
+    "unread": "Unread"
+  },
+  "tg": {
+    "notifications": "Огоҳиномаҳо",
+    "markAll": "Ҳамаро хондашуда кардан",
+    "all": "Ҳама",
+    "unread": "Хонданашуда"
+  },
+  "ru": {
+    "notifications": "Уведомления",
+    "markAll": "Прочитать все",
+    "all": "Все",
+    "unread": "Непрочитанные"
+  }
 }

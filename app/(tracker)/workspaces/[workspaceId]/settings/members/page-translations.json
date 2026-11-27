@@ -1,5 +1,26 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "settings": "Settings",
+    "title": "Workspace settings",
+    "general": "General",
+    "members": "Members",
+    "changeRole": "Change role",
+    "remove": "Remove"
+  },
+  "tg": {
+    "settings": "Танзимот",
+    "title": "Танзимоти workspace",
+    "general": "Умумӣ",
+    "members": "Аъзо",
+    "changeRole": "Иваз кардани нақш",
+    "remove": "Хориҷ кардан"
+  },
+  "ru": {
+    "settings": "Настройки",
+    "title": "Настройки workspace",
+    "general": "Общие",
+    "members": "Участники",
+    "changeRole": "Изменить роль",
+    "remove": "Удалить"
+  }
 }

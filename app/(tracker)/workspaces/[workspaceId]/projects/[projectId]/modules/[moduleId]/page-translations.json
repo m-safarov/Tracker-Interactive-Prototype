@@ -1,5 +1,14 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "modules": "Modules",
+    "addTasks": "Add tasks"
+  },
+  "tg": {
+    "modules": "Модулҳо",
+    "addTasks": "Илова кардани вазифаҳо"
+  },
+  "ru": {
+    "modules": "Модули",
+    "addTasks": "Добавить задачи"
+  }
 }

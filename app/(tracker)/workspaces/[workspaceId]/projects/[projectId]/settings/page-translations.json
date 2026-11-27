@@ -1,5 +1,47 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "settings": "Settings",
+    "title": "Project settings",
+    "general": "General",
+    "members": "Members",
+    "statuses": "Statuses",
+    "labels": "Labels",
+    "name": "Name",
+    "key": "Key",
+    "description": "Description",
+    "lead": "Lead",
+    "save": "Save changes",
+    "archive": "Archive project",
+    "delete": "Delete project"
+  },
+  "tg": {
+    "settings": "Танзимот",
+    "title": "Танзимоти проект",
+    "general": "Умумӣ",
+    "members": "Аъзо",
+    "statuses": "Статусҳо",
+    "labels": "Нишонаҳо",
+    "name": "Ном",
+    "key": "Калид",
+    "description": "Тавсиф",
+    "lead": "Роҳбар",
+    "save": "Захира кардан",
+    "archive": "Ба архив",
+    "delete": "Нест кардани проект"
+  },
+  "ru": {
+    "settings": "Настройки",
+    "title": "Настройки проекта",
+    "general": "Общие",
+    "members": "Участники",
+    "statuses": "Статусы",
+    "labels": "Метки",
+    "name": "Название",
+    "key": "Ключ",
+    "description": "Описание",
+    "lead": "Лидер",
+    "save": "Сохранить",
+    "archive": "Архивировать",
+    "delete": "Удалить проект"
+  }
 }
