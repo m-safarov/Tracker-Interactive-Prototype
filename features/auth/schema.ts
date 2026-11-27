@@ -26,3 +26,30 @@ export const formSchemas = {
 export type LoginBody = z.infer<typeof loginRequestSchema>;
 export type RegisterBody = z.infer<typeof registerRequestSchema>;
 export type AuthFormValues = z.infer<typeof registerSchema>;
+
+const photoUrl = z.url({ protocol: /^https?$/, error: "Enter a valid photo URL." });
+
+export const profileFormSchema = z.object({
+  display_name: registerSchema.shape.display_name,
+  avatar_url: z.string().trim().transform((value) => value || null).pipe(photoUrl.nullable()),
+});
+
+export const updateProfileSchema = z.object({
+  display_name: registerSchema.shape.display_name.optional(),
+  avatar_url: photoUrl.nullable().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  current_password: loginSchema.shape.password,
+  new_password: registerSchema.shape.password,
+});
+
+export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
+export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
+
+export type AccountProfile = {
+  id: string;
+  display_name: string;
+  email: string;
+  avatar_url: string | null;
+};
