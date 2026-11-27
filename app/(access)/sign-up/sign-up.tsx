@@ -1,4 +1,5 @@
-// Dev 1 — Формаи сабти ном.
+import { AuthScreen } from "@/features/auth/auth-screen";
+
 export default function SignUpPage() {
-  return <main />;
+  return <AuthScreen mode="register" />;
 }
