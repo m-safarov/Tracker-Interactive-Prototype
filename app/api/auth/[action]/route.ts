@@ -1,14 +1,14 @@
 import axios from "axios";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { loginRequestSchema, registerRequestSchema } from "@/features/auth/schema";
-import { backend, safeNextPath, setSessionCookies, workspaceProjects, type TokenPair } from "@/features/auth/server";
+import { changePasswordSchema, loginRequestSchema, registerRequestSchema, updateProfileSchema, type AccountProfile } from "@/features/auth/schema";
+import { accessCookie, backend, clearSessionCookies, safeNextPath, setSessionCookies, workspaceProjects, type TokenPair } from "@/features/auth/server";
 
 type BackendError = {
   error?: { code?: string; message?: string; details?: { target?: string | string[] } };
 };
 
-function failure(status: number, message: string, field?: "email") {
+function failure(status: number, message: string, field?: "email" | "current_password") {
   return NextResponse.json({ error: { message, field } }, { status });
 }
 
@@ -41,12 +41,7 @@ function authFailure(error: unknown, action: "login" | "register") {
   return failure(502, "Authentication is temporarily unavailable. Please try again.");
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ action: string }> }) {
-  const { action } = await context.params;
-  if (action !== "login" && action !== "register") {
-    return failure(404, "Unknown authentication request.");
-  }
-
+function checkJsonRequest(request: NextRequest) {
   const origin = request.headers.get("origin");
   const contentType = request.headers.get("content-type")?.split(";")[0].trim();
   if (origin && origin !== request.nextUrl.origin) {
@@ -55,12 +50,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ac
   if (contentType !== "application/json") {
     return failure(415, "Send the request as JSON.");
   }
+}
+
+export async function POST(request: NextRequest, context: { params: Promise<{ action: string }> }) {
+  const { action } = await context.params;
+  if (action === "change-password") return profileRequest(request, "password");
+  if (action !== "login" && action !== "register") {
+    return failure(404, "Unknown authentication request.");
+  }
+
+  const problem = checkJsonRequest(request);
+  if (problem) return problem;
 
   const body: unknown = await request.json().catch(() => null);
 
   try {
     let tokens: TokenPair;
-    let destination = "/workspaces/new";
+    let destination = "/profile";
 
     if (action === "register") {
       const parsed = registerRequestSchema.safeParse(body);
@@ -107,5 +113,67 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ac
     return response;
   } catch (error) {
     return authFailure(error, action);
+  }
+}
+
+export async function GET(request: NextRequest, context: { params: Promise<{ action: string }> }) {
+  const { action } = await context.params;
+  if (action !== "me") return failure(404, "Unknown authentication request.");
+  return profileRequest(request, "read");
+}
+
+export async function PATCH(request: NextRequest, context: { params: Promise<{ action: string }> }) {
+  const { action } = await context.params;
+  if (action !== "me") return failure(404, "Unknown authentication request.");
+  return profileRequest(request, "update");
+}
+
+async function profileRequest(request: NextRequest, action: "read" | "update" | "password") {
+  const token = request.cookies.get(accessCookie)?.value;
+  if (!token) return failure(401, "Sign in to access your profile.");
+
+  const headers = { Authorization: "Bearer " + token };
+  const noStore = { "Cache-Control": "no-store" };
+
+  try {
+    if (action === "read") {
+      const { data } = await backend.get<AccountProfile>("/auth/me", { headers });
+      return NextResponse.json(data, { headers: noStore });
+    }
+
+    const problem = checkJsonRequest(request);
+    if (problem) return problem;
+    const body: unknown = await request.json().catch(() => null);
+
+    if (action === "update") {
+      const profile = updateProfileSchema.safeParse(body);
+      if (!profile.success) return failure(400, profile.error.issues[0].message);
+
+      const { data } = await backend.patch<AccountProfile>("/auth/me", profile.data, { headers });
+      return NextResponse.json(data, { headers: noStore });
+    }
+
+    const password = changePasswordSchema.safeParse(body);
+    if (!password.success) return failure(400, password.error.issues[0].message);
+
+    await backend.post("/auth/change-password", password.data, { headers });
+    const response = new NextResponse(null, { status: 204, headers: noStore });
+    clearSessionCookies(request, response);
+    return response;
+  } catch (error) {
+    if (!axios.isAxiosError<BackendError>(error) || !error.response) {
+      return failure(503, "The server is unavailable. Please try again.");
+    }
+    const { status, data } = error.response;
+    if (action === "password" && status === 401 && data?.error?.message === "Current password is incorrect") {
+      return failure(401, "Current password is incorrect.", "current_password");
+    }
+    if (status === 401 || status === 403) {
+      return failure(401, "Your session expired. Sign in again.");
+    }
+    if (status === 429) return failure(429, "Too many attempts. Try again in a minute.");
+    if (status === 400) return failure(400, "Check your details and try again.");
+
+    return failure(502, "Could not complete the profile request. Please try again.");
   }
 }
