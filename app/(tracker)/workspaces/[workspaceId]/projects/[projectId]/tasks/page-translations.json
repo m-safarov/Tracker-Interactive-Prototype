@@ -90,6 +90,17 @@
       "copyLink": "Copy task link",
       "openPage": "Open task page",
       "menu": "Task menu"
+    },
+    "newTask": {
+      "newTask": "New task",
+      "introduction": "Choose a title and status for the task.",
+      "title": "Title",
+      "taskTitle": "Task title",
+      "status": "Status",
+      "todo": "Todo",
+      "inProgress": "In Progress",
+      "create": "Create task",
+      "cancel": "Cancel"
     }
   },
   "tg": {
@@ -183,6 +194,17 @@
       "copyLink": "Нусхаи пайванди вазифа",
       "openPage": "Кушодани саҳифаи вазифа",
       "menu": "Менюи вазифа"
+    },
+    "newTask": {
+      "newTask": "Вазифаи нав",
+      "introduction": "Унвон ва ҳолати вазифаро интихоб кунед.",
+      "title": "Унвон",
+      "taskTitle": "Унвони вазифа",
+      "status": "Ҳолат",
+      "todo": "Барои иҷро",
+      "inProgress": "Дар иҷро",
+      "create": "Сохтани вазифа",
+      "cancel": "Бекор кардан"
     }
   },
   "ru": {
@@ -276,6 +298,17 @@
       "copyLink": "Скопировать ссылку на задачу",
       "openPage": "Открыть страницу задачи",
       "menu": "Меню задачи"
+    },
+    "newTask": {
+      "newTask": "Новая задача",
+      "introduction": "Укажите название и статус задачи.",
+      "title": "Название",
+      "taskTitle": "Название задачи",
+      "status": "Статус",
+      "todo": "К выполнению",
+      "inProgress": "В работе",
+      "create": "Создать задачу",
+      "cancel": "Отмена"
     }
   }
 }
