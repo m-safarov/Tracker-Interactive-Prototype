@@ -37,7 +37,7 @@ export default function CreateWorkspacePage() {
     defaultValues: { name: "", slug: "" },
   });
 
-  const createWorkspace = useMutation({
+  const postWorkspace = useMutation({
     mutationFn: (values: WorkspaceForm) => api.post("/workspaces/", values),
     onSuccess: (_response, values) => {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
@@ -48,7 +48,7 @@ export default function CreateWorkspacePage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-[16px]">
       <form
-        onSubmit={handleSubmit((values) => createWorkspace.mutate(values))}
+        onSubmit={handleSubmit((values) => postWorkspace.mutate(values))}
         className="flex w-full max-w-[360px] flex-col gap-[16px]"
       >
         <h1 className="text-[20px] font-semibold">Tracker</h1>
@@ -79,13 +79,13 @@ export default function CreateWorkspacePage() {
           )}
         </div>
 
-        {createWorkspace.error && (
+        {postWorkspace.error && (
           <p role="alert" className="text-[12px] text-[#DC2626]">
-            {errorText(createWorkspace.error)}
+            {errorText(postWorkspace.error)}
           </p>
         )}
-        <Button type="submit" className="mt-[4px] w-full" disabled={createWorkspace.isPending}>
-          {createWorkspace.isPending ? "Creating..." : t.create}
+        <Button type="submit" className="mt-[4px] w-full" disabled={postWorkspace.isPending}>
+          {postWorkspace.isPending ? "Creating..." : t.create}
         </Button>
       </form>
     </main>

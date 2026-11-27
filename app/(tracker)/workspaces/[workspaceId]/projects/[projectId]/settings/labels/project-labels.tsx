@@ -2,33 +2,82 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { api, errorText } from "@/lib/api";
 import NewLabelDialog from "./dialogs/new-label-dialog";
 import translations from "./page-translations.json";
 
-// Dev 2 — Нишонаҳои проект. Figma: фрейми "Project labels".
+interface Workspace {
+  name: string;
+}
+
+interface Project {
+  name: string;
+}
+
+interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export default function ProjectLabelsPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
+  const queryClient = useQueryClient();
 
-  // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const t = translations.en;
 
-  // Синфҳои як сатр ва нишона — дар ҳамаи сатрҳо як хел.
   const row = "flex h-[48px] items-center justify-between border-b border-border";
   const label = "rounded-[4px] px-[6px] py-[1px] text-[12px]";
+  const muted = "text-[12px] text-muted-foreground";
+
+  const { data: getWorkspace } = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<Workspace>(`/workspaces/${workspaceId}`);
+      return data;
+    },
+  });
+
+  const { data: getProject } = useQuery({
+    queryKey: ["project", workspaceId, projectId],
+    queryFn: async () => {
+      const { data } = await api.get<Project>(p);
+      return data;
+    },
+  });
+
+  const { data: getLabels = [], isPending, error } = useQuery({
+    queryKey: ["labels", workspaceId, projectId],
+    queryFn: async () => {
+      const { data } = await api.get<Label[]>(`${p}/labels/`);
+      return data;
+    },
+  });
+
+  const deleteLabel = useMutation({
+    mutationFn: (id: string) => api.delete(`${p}/labels/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["labels", workspaceId, projectId] });
+    },
+  });
+
+  const isEmpty = !isPending && !error && getLabels.length === 0;
 
   return (
     <div className="flex min-h-screen">
       <WorkspaceSidebar active="settings" />
 
       <main className="flex flex-1 flex-col">
-        <PageHeading crumbs={["Demo Team", "Website", t.settings]} title={t.title} />
+        <PageHeading crumbs={[getWorkspace?.name ?? "", getProject?.name ?? "", t.settings]} title={t.title} />
 
         {/* Табҳо: General / Members / Statuses / Labels */}
         <Tabs value="labels">
@@ -57,36 +106,43 @@ export default function ProjectLabelsPage() {
 
             {/* Рӯйхати нишонаҳо. Ранг аз API меояд, барои ҳамин style. "1A" охири ранг = заминаи шаффоф. */}
             <div className="flex flex-col px-[16px]">
-              <div className={row}>
-                <span className={label} style={{ color: "#047857", backgroundColor: "#10B9811A" }}>backend</span>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
-                  <MoreHorizontal />
-                </Button>
-              </div>
-              <div className={row}>
-                <span className={label} style={{ color: "#B91C1C", backgroundColor: "#EF44441A" }}>bug</span>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
-                  <MoreHorizontal />
-                </Button>
-              </div>
-              <div className={row}>
-                <span className={label} style={{ color: "#7E22CE", backgroundColor: "#A855F71A" }}>design</span>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
-                  <MoreHorizontal />
-                </Button>
-              </div>
-              <div className={row}>
-                <span className={label} style={{ color: "#1D4ED8", backgroundColor: "#3B82F61A" }}>feature</span>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
-                  <MoreHorizontal />
-                </Button>
-              </div>
-              <div className={row}>
-                <span className={label} style={{ color: "#B45309", backgroundColor: "#F59E0B1A" }}>frontend</span>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
-                  <MoreHorizontal />
-                </Button>
-              </div>
+              {isPending && <p className={`py-[12px] ${muted}`}>Loading...</p>}
+              {error && (
+                <p role="alert" className="py-[12px] text-[13px] text-[#DC2626]">
+                  {errorText(error)}
+                </p>
+              )}
+              {deleteLabel.error && (
+                <p role="alert" className="py-[12px] text-[13px] text-[#DC2626]">
+                  {errorText(deleteLabel.error)}
+                </p>
+              )}
+              {isEmpty && <p className={`py-[12px] ${muted}`}>No labels yet</p>}
+
+              {getLabels.map((el) => (
+                <div key={el.id} className={row}>
+                  <span className={label} style={{ color: el.color, backgroundColor: `${el.color}1A` }}>
+                    {el.name}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label="Label menu">
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        destructive
+                        onSelect={() => {
+                          if (window.confirm("Delete label?")) deleteLabel.mutate(el.id);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
