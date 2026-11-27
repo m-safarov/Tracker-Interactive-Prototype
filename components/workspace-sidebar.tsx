@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 // Sidebar-и workspace, ки дар ҳамаи саҳифаҳои Dev2 ҳаст. Figma: компоненти "Workspace sidebar".
 // active — кадом банд ранги кабуд дорад.
 interface WorkspaceSidebarProps {
-  active?: "notifications" | "projects" | "tasks" | "cycles" | "modules" | "settings";
+  active?: "my-tasks" | "notifications" | "projects" | "tasks" | "cycles" | "modules" | "settings";
 }
 
 export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
@@ -50,7 +50,7 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
 
       {/* Менюи асосӣ */}
       <nav className="flex flex-col gap-[2px] text-[13px]">
-        <Link href={`${w}/my-tasks`} className={item}>
+        <Link href={`${w}/my-tasks`} className={`${item} ${active === "my-tasks" ? activeItem : ""}`}>
           <UserCheck className="size-[16px]" /> My tasks
         </Link>
         <Link href={`${w}/notifications`} className={`${item} ${active === "notifications" ? activeItem : ""}`}>
