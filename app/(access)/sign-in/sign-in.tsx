@@ -1,77 +1,35 @@
-"use client";
-
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getAuthError, useLoginMutation } from "@/features/auth/auth-api";
-import { AuthLayout, AuthProvider, FormField, useDraftEmail } from "@/features/auth/auth-screen";
-import { loginSchema } from "@/features/auth/schema";
-
-function SignInForm() {
-  const [login, { reset }] = useLoginMutation();
-  const { email, saveEmail } = useDraftEmail();
-  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email, password: "" },
-  });
-
-  const submit = handleSubmit(async (body) => {
-    saveEmail(body.email);
-    const next = new URLSearchParams(window.location.search).get("next") ?? undefined;
-
-    try {
-      await login({ ...body, next }).unwrap();
-    } catch (error) {
-      setError("root.server", { message: getAuthError(error).message });
-    } finally {
-      reset();
-    }
-  });
-
-  return (
-    <AuthLayout title="Sign in" className="pt-20" linkHref="/register" linkText="Create account">
-      <form method="post" onSubmit={submit} className="mt-4" noValidate>
-        <div className="grid gap-3">
-          <FormField
-            {...register("email")}
-            id="auth-email"
-            label="Email"
-            type="email"
-            autoComplete="username"
-            placeholder="farrukh@example.com"
-            autoFocus
-            required
-            error={errors.email?.message}
-          />
-          <FormField
-            {...register("password")}
-            id="auth-password"
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            className="placeholder:tracking-[2px]"
-            required
-            error={errors.password?.message}
-          />
-        </div>
-
-        {errors.root?.server?.message && (
-          <p role="alert" className="mt-3 text-sm text-destructive">{errors.root.server.message}</p>
-        )}
-        <Button type="submit" disabled={isSubmitting} className="mt-4 w-full border-0 text-[13.5px]">
-          {isSubmitting ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-    </AuthLayout>
-  );
-}
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import translations from "./page-translations.json";
 
 export default function SignInPage() {
+  const t = translations.en;
+  const field = "flex flex-col gap-[6px]";
+
   return (
-    <AuthProvider>
-      <SignInForm />
-    </AuthProvider>
+    <main className="grid min-h-screen place-items-center px-[24px]">
+      <section className="w-full max-w-[360px] -translate-y-[20px]">
+        <h1 className="mb-[16px] text-[20px] font-semibold">{t.tracker}</h1>
+        <h2 className="mb-[12px] text-[16px] font-semibold">{t.signIn}</h2>
+        <form className="flex flex-col gap-[10px]">
+          <div className={field}>
+            <Label htmlFor="sign-in-email">{t.email}</Label>
+            <Input id="sign-in-email" name="email" type="email" autoComplete="email" defaultValue="farrukh@example.com" />
+          </div>
+          <div className={field}>
+            <Label htmlFor="sign-in-password">{t.password}</Label>
+            <Input id="sign-in-password" name="password" type="password" autoComplete="current-password" placeholder={t.passwordPreview} />
+          </div>
+          <Button type="button" size="sm" className="mt-[6px] w-full">
+            {t.signIn}
+          </Button>
+        </form>
+        <Link href="/sign-up" className="mt-[18px] inline-block text-[13px] text-primary hover:underline">
+          {t.createAccount}
+        </Link>
+      </section>
+    </main>
   );
 }
