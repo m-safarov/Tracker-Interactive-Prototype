@@ -33,20 +33,26 @@
       "tooManyAttempts": "Too many attempts. Try again in a minute.",
       "invalidDetails": "Check your details and try again.",
       "requestFailed": "Could not complete the request. Please try again."
-    }
+    },
+    "team": "Demo Team",
+    "photo": "Photo (URL)",
+    "changePassword": "Change password",
+    "english": "English",
+    "tajik": "Тоҷикӣ",
+    "russian": "Русский"
   },
   "tg": {
     "profile": "Профил",
     "name": "Ном",
     "photoUrl": "Пайванди акс",
     "email": "Почтаи электронӣ",
-    "preferences": "Танзимот",
+    "preferences": "Хоҳишҳо",
     "language": "Забон",
     "theme": "Мавзӯъ",
     "system": "Системавӣ",
     "light": "Равшан",
     "dark": "Торик",
-    "save": "Нигоҳ доштан",
+    "save": "Сабти тағйирот",
     "saving": "Сабт шуда истодааст…",
     "saved": "Тағйирот сабт шуд",
     "loading": "Профил бор шуда истодааст…",
@@ -69,14 +75,20 @@
       "tooManyAttempts": "Кӯшишҳо зиёд шуданд. Пас аз як дақиқа дубора санҷед.",
       "invalidDetails": "Маълумотро санҷида, дубора кӯшиш кунед.",
       "requestFailed": "Дархост иҷро нашуд. Дубора кӯшиш кунед."
-    }
+    },
+    "team": "Гурӯҳи намунавӣ",
+    "photo": "Акс (URL)",
+    "changePassword": "Иваз кардани рамз",
+    "english": "Англисӣ",
+    "tajik": "Тоҷикӣ",
+    "russian": "Русӣ"
   },
   "ru": {
     "profile": "Профиль",
     "name": "Имя",
     "photoUrl": "Ссылка на фото",
     "email": "Электронная почта",
-    "preferences": "Настройки",
+    "preferences": "Предпочтения",
     "language": "Язык",
     "theme": "Тема",
     "system": "Системная",
@@ -105,6 +117,12 @@
       "tooManyAttempts": "Слишком много попыток. Попробуйте через минуту.",
       "invalidDetails": "Проверьте введённые данные и повторите попытку.",
       "requestFailed": "Не удалось выполнить запрос. Попробуйте ещё раз."
-    }
+    },
+    "team": "Демо-команда",
+    "photo": "Фото (URL)",
+    "changePassword": "Изменить пароль",
+    "english": "Английский",
+    "tajik": "Таджикский",
+    "russian": "Русский"
   }
 }
