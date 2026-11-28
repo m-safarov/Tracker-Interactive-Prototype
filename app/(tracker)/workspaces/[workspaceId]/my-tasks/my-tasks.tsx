@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { Circle, CircleCheck, CircleDashed, CircleX, Contrast, Minus, MoreHorizontal, OctagonExclamationPoint, Plus, SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
+import createdTranslations from "./created/page-translations.json";
 import translations from "./page-translations.json";
 
 type Project = { id: string; identifier: string };
@@ -34,8 +35,9 @@ type Issue = {
   assignees: { user: { id: string; display_name: string; avatar_url: string | null } }[];
 };
 type IssuePage = { data: Issue[]; next_cursor: string | null };
-type AssignedTask = Issue & { taskKey: string; state?: ProjectState };
-type TaskGroup = { key: string; state?: ProjectState; tasks: AssignedTask[] };
+type Task = Issue & { taskKey: string; state?: ProjectState };
+type TaskGroup = { key: string; state?: ProjectState; tasks: Task[] };
+type TaskFilter = "assignee" | "created_by";
 
 const stateIcons = {
   backlog: CircleDashed,
@@ -52,14 +54,14 @@ const priorities = {
   urgent: { icon: OctagonExclamationPoint, color: "#DC2626" },
 } satisfies Record<Issue["priority"], { icon: LucideIcon; color?: string }>;
 
-async function loadProjectTasks(workspacePath: string, project: Project, userId: string, signal: AbortSignal) {
+async function loadProjectTasks(workspacePath: string, project: Project, userId: string, filter: TaskFilter, signal: AbortSignal) {
   const projectPath = `${workspacePath}/projects/${encodeURIComponent(project.id)}`;
   const issues: Issue[] = [];
   let cursor: string | null = null;
 
   do {
     const { data }: { data: IssuePage } = await api.get<IssuePage>(`${projectPath}/issues`, {
-      params: { assignee: userId, limit: 100, cursor },
+      params: { [filter]: userId, limit: 100, cursor },
       signal,
     });
     issues.push(...data.data);
@@ -76,20 +78,20 @@ async function loadProjectTasks(workspacePath: string, project: Project, userId:
   }));
 }
 
-async function loadMyTasks(workspacePath: string, signal: AbortSignal) {
+async function loadMyTasks(workspacePath: string, filter: TaskFilter, signal: AbortSignal) {
   const [account, workspace, projects] = await Promise.all([
     api.get<{ id: string }>("/auth/me", { signal }),
     api.get<{ name: string }>(workspacePath, { signal }),
     api.get<Project[]>(`${workspacePath}/projects`, { signal }),
   ]);
   const tasks = await Promise.all(projects.data.map((project) =>
-    loadProjectTasks(workspacePath, project, account.data.id, signal),
+    loadProjectTasks(workspacePath, project, account.data.id, filter, signal),
   ));
 
   return { workspaceName: workspace.data.name, tasks: tasks.flat() };
 }
 
-function groupTasks(tasks: AssignedTask[]) {
+function groupTasks(tasks: Task[]) {
   const groups = new Map<string, TaskGroup>();
   for (const task of tasks) {
     const state = task.state;
@@ -106,15 +108,18 @@ function groupTasks(tasks: AssignedTask[]) {
 
 export default function MyTasksPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const pathname = usePathname();
   const workspacePath = `/workspaces/${encodeURIComponent(workspaceId)}`;
   const path = `${workspacePath}/my-tasks`;
+  const view = pathname.endsWith("/created") ? "created" : "assigned";
+  const filter = view === "created" ? "created_by" : "assignee";
   const myTasks = useQuery({
-    queryKey: ["my-tasks", workspaceId],
-    queryFn: ({ signal }) => loadMyTasks(workspacePath, signal),
+    queryKey: ["my-tasks", workspaceId, view],
+    queryFn: ({ signal }) => loadMyTasks(workspacePath, filter, signal),
     gcTime: 0,
     retry: false,
   });
-  const t = translations.en;
+  const t = view === "created" ? createdTranslations.en : translations.en;
   const groups = groupTasks(myTasks.data?.tasks ?? []);
   const sessionExpired = isAxiosError(myTasks.error) && myTasks.error.response?.status === 401;
   const today = new Date();
@@ -147,7 +152,7 @@ export default function MyTasksPage() {
     );
   }
 
-  function renderTask(task: AssignedTask) {
+  function renderTask(task: Task) {
     const priority: { icon: LucideIcon; color?: string } = priorities[task.priority];
     const date = task.due_date ? new Date(task.due_date) : null;
     const overdue = date && date.getTime() < startOfToday && !task.completed_at
@@ -186,7 +191,7 @@ export default function MyTasksPage() {
       <WorkspaceSidebar active="my-tasks" />
       <main className="min-w-0 flex-1 overflow-auto">
         <PageHeading crumbs={myTasks.data ? [myTasks.data.workspaceName, t.myTasks] : [t.myTasks]} title={t.myTasks} />
-        <Tabs value="assigned">
+        <Tabs value={view}>
           <TabsList className="h-[40px] items-end gap-[25px] px-[24px]">
             <TabsTrigger value="assigned" asChild className={tabLink}>
               <Link href={path}>{t.assignedToMe}</Link>
@@ -206,7 +211,7 @@ export default function MyTasksPage() {
               <p role="alert" className="text-destructive">{errorText(myTasks.error)}</p>
               {sessionExpired ? (
                 <Button asChild variant="outline" size="sm">
-                  <Link href={`/sign-in?next=${encodeURIComponent(path)}`}>{t.signIn}</Link>
+                  <Link href={`/sign-in?next=${encodeURIComponent(pathname)}`}>{t.signIn}</Link>
                 </Button>
               ) : (
                 <Button type="button" variant="outline" size="sm" onClick={() => myTasks.refetch()} disabled={myTasks.isFetching}>

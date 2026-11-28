@@ -97,10 +97,20 @@
       "title": "Title",
       "taskTitle": "Task title",
       "status": "Status",
-      "todo": "Todo",
-      "inProgress": "In Progress",
+      "project": "Project",
+      "chooseProject": "Choose a project",
+      "noProjects": "There are no active projects in this workspace.",
+      "noStatuses": "This project has no statuses.",
+      "loading": "Loading options…",
+      "retry": "Try again",
+      "titleRequired": "Enter a task title.",
+      "titleTooLong": "Use 500 characters or fewer.",
       "create": "Create task",
-      "cancel": "Cancel"
+      "creating": "Creating…",
+      "created": "Task created",
+      "viewCreated": "Go to Created by me",
+      "cancel": "Cancel",
+      "close": "Close"
     }
   },
   "tg": {
@@ -201,10 +211,20 @@
       "title": "Унвон",
       "taskTitle": "Унвони вазифа",
       "status": "Ҳолат",
-      "todo": "Барои иҷро",
-      "inProgress": "Дар иҷро",
+      "project": "Лоиҳа",
+      "chooseProject": "Лоиҳаро интихоб кунед",
+      "noProjects": "Дар ин фазои корӣ лоиҳаи фаъол нест.",
+      "noStatuses": "Ин лоиҳа ҳолат надорад.",
+      "loading": "Интихобҳо бор шуда истодаанд…",
+      "retry": "Дубора санҷидан",
+      "titleRequired": "Унвони вазифаро ворид кунед.",
+      "titleTooLong": "То 500 аломат истифода баред.",
       "create": "Сохтани вазифа",
-      "cancel": "Бекор кардан"
+      "creating": "Вазифа сохта шуда истодааст…",
+      "created": "Вазифа сохта шуд",
+      "viewCreated": "Ба «Сохтаи ман» гузаред",
+      "cancel": "Бекор кардан",
+      "close": "Пӯшидан"
     }
   },
   "ru": {
@@ -305,10 +325,20 @@
       "title": "Название",
       "taskTitle": "Название задачи",
       "status": "Статус",
-      "todo": "К выполнению",
-      "inProgress": "В работе",
+      "project": "Проект",
+      "chooseProject": "Выберите проект",
+      "noProjects": "В этом рабочем пространстве нет активных проектов.",
+      "noStatuses": "В этом проекте нет статусов.",
+      "loading": "Загрузка вариантов…",
+      "retry": "Повторить",
+      "titleRequired": "Введите название задачи.",
+      "titleTooLong": "Используйте не более 500 символов.",
       "create": "Создать задачу",
-      "cancel": "Отмена"
+      "creating": "Создание…",
+      "created": "Задача создана",
+      "viewCreated": "Перейти в «Созданные мной»",
+      "cancel": "Отмена",
+      "close": "Закрыть"
     }
   }
 }
