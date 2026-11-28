@@ -10,13 +10,6 @@ function redirectToLogin(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  if (path === "/api/invites" || path.startsWith("/api/invites/")) {
-    const target = request.nextUrl.clone();
-    target.pathname = "/api/workspaces/_invites" + path.slice("/api/invites".length);
-    return NextResponse.rewrite(target);
-  }
-
   const token = request.cookies.get(accessCookie)?.value;
   if (!token) return redirectToLogin(request);
 
@@ -34,5 +27,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/workspaces/:path*", "/api/invites/:path*"],
+  matcher: ["/profile/:path*", "/workspaces/:path*"],
 };

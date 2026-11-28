@@ -43,11 +43,8 @@ function authFailure(error: unknown, action: "login" | "register") {
 
 function checkJsonRequest(request: NextRequest) {
   const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-  // Next.js суроғаҳои loopback-ро дар nextUrl ба localhost табдил медиҳад.
-  const requestOrigin = host ? `${request.nextUrl.protocol}//${host.toLowerCase()}` : request.nextUrl.origin;
   const contentType = request.headers.get("content-type")?.split(";")[0].trim();
-  if (origin && origin !== requestOrigin) {
+  if (origin && origin !== request.nextUrl.origin) {
     return failure(403, "This request must come from Tracker.");
   }
   if (contentType !== "application/json") {
