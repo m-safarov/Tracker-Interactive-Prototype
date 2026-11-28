@@ -19,6 +19,7 @@ import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import NewTaskDialog from "./dialogs/new-task-dialog";
 import TaskDetailSheet from "./dialogs/task-detail-sheet";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 const stateIcons = {
@@ -176,7 +177,8 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
     },
   });
 
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
   const queries = hasProjectId ? [workspace, project, states, issues] : [workspace, projects];
   const failedQueries = queries.filter((el) => el.isError);
   const queryError = failedQueries[0]?.error;

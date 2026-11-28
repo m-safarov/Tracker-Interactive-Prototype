@@ -13,6 +13,7 @@ import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import AddProjectMemberDialog from "./dialogs/add-project-member-dialog";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -46,7 +47,8 @@ export default function ProjectMembersPage() {
   const queryClient = useQueryClient();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   // Синфи як сатри аъзо — дар ҳамаи сатрҳо як хел.
   const row = "flex h-[48px] items-center gap-[8px] border-b border-border text-[13px]";

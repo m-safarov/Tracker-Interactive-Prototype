@@ -11,6 +11,8 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import {
   Dialog,
   DialogClose,
@@ -47,7 +49,6 @@ type RequestError = keyof ProfileText["errors"];
 
 const loginUrl = "/login?next=%2Fprofile";
 const themeKey = "tracker-profile-theme";
-const languageKey = "tracker-profile-language";
 const preferenceEvent = "tracker-profile-preferences-changed";
 const systemTheme = "(prefers-color-scheme: dark)";
 const colors = "[--primary:#3b5bdb] [--primary-foreground:#fff] [--radius:6px] [--ring:#3b5bdb]";
@@ -72,7 +73,8 @@ function ProfileContent() {
       router.replace("/sign-in");
     },
   });
-  const { language, theme, isDark } = useProfilePreferences();
+  const language = usePreferencesStore((state) => state.language);
+  const { theme, isDark } = useProfilePreferences();
   const text = translations[language];
   const needsLogin = error && "status" in error && error.status === 401;
 
@@ -249,24 +251,24 @@ function Preferences({
   language: Language;
   text: ProfileText;
 }) {
+  const setLanguage = usePreferencesStore((state) => state.setLanguage);
   return (
     <SettingsCard title={text.preferences}>
       <div className="grid gap-3">
         <div className="flex items-center justify-between gap-4">
-          <label htmlFor="profile-language" className="text-sm">{text.language}</label>
-          <div data-slot="native-select-wrapper" className="relative w-48 max-w-[55%]">
-            <Globe aria-hidden="true" className="pointer-events-none absolute top-2 left-2 size-4 text-muted-foreground" />
-            <select
-              data-slot="native-select"
-              id="profile-language"
-              className={selectStyle}
-              value={language}
-              onChange={(event) => savePreference(languageKey, event.target.value)}
-            >
-              <option value="en" lang="en">English</option>
-              <option value="tg" lang="tg">Тоҷикӣ</option>
-              <option value="ru" lang="ru">Русский</option>
-            </select>
+          <span id="profile-language" className="text-sm">{text.language}</span>
+          <div role="group" aria-labelledby="profile-language" className="w-48 max-w-[55%]">
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger>
+                <Globe aria-hidden="true" className="size-4 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="tg">Тоҷикӣ</SelectItem>
+                <SelectItem value="ru">Русский</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -308,7 +310,6 @@ function Preferences({
 }
 
 function useProfilePreferences() {
-  const savedLanguage = useSavedPreference(languageKey);
   const savedTheme = useSavedPreference(themeKey);
   const systemIsDark = useSyncExternalStore(
     subscribeToPreferences,
@@ -316,11 +317,10 @@ function useProfilePreferences() {
     () => false,
   );
 
-  const language: Language = savedLanguage === "tg" || savedLanguage === "ru" ? savedLanguage : "en";
   const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
   const isDark = theme === "dark" || (theme === "system" && systemIsDark);
 
-  return { language, theme, isDark };
+  return { theme, isDark };
 }
 
 function useSavedPreference(key: string) {

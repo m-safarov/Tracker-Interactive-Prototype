@@ -12,6 +12,7 @@ import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import NewStatusDialog from "./dialogs/new-status-dialog";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -47,7 +48,8 @@ export default function ProjectStatusesPage() {
   const queryClient = useQueryClient();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   // Синфҳои як сатр — дар ҳамаи сатрҳо як хел.
   const row = "flex h-[48px] items-center gap-[10px] border-b border-border text-[13px]";

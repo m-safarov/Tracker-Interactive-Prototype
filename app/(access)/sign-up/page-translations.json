@@ -5,7 +5,8 @@
     "createAccount": "Create account",
     "email": "Email",
     "password": "Password",
-    "name": "Name"
+    "name": "Name",
+    "creatingAccount": "Creating account…"
   },
   "tg": {
     "tracker": "Tracker",
@@ -13,7 +14,8 @@
     "createAccount": "Сохтани ҳисоб",
     "email": "Почтаи электронӣ",
     "password": "Рамз",
-    "name": "Ном"
+    "name": "Ном",
+    "creatingAccount": "Ҳисоб сохта шуда истодааст…"
   },
   "ru": {
     "tracker": "Tracker",
@@ -21,6 +23,7 @@
     "createAccount": "Создать аккаунт",
     "email": "Электронная почта",
     "password": "Пароль",
-    "name": "Имя"
+    "name": "Имя",
+    "creatingAccount": "Создание аккаунта…"
   }
 }

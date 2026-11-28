@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -35,7 +36,8 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   // Сатри огоҳинома: unread — заминаи кабуди сабук ва нуқтаи кабуд.
   const row = "flex h-[64px] w-full items-center gap-[12px] border-b border-border px-[24px] text-left";

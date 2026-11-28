@@ -10,6 +10,7 @@ import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import NewCycleDialog from "./dialogs/new-cycle-dialog";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -35,7 +36,8 @@ export default function CyclesPage() {
   const queryClient = useQueryClient();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   // Синфҳо — дар ҳамаи гурӯҳҳо ва сатрҳо як хел.
   const group = "flex h-[36px] items-center border-b border-border bg-muted px-[24px] text-[13px] font-semibold";

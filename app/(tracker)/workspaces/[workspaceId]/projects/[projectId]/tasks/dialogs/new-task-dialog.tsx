@@ -16,9 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "../page-translations.json";
 
-const copy = translations.en.newTask;
 const messages = translations.tg.newTask;
 const formSchema = z.object({
   title: z.string().trim().min(1, messages.titleRequired).max(500, messages.titleTooLong),
@@ -55,6 +55,9 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function NewTaskDialog() {
+  const { language } = usePreferencesStore();
+  const t = translations[language];
+  const copy = t.newTask;
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -228,7 +231,7 @@ export default function NewTaskDialog() {
             {project && !loading && !optionError && (
               <div className="grid grid-cols-2 gap-[8px]">
                 <fieldset disabled={saving} className="min-w-0 rounded-[6px] border border-border p-[8px]">
-                  <legend className="px-[4px] text-[13px]">{translations.en.assignees}</legend>
+                  <legend className="px-[4px] text-[13px]">{t.assignees}</legend>
                   <div className="flex max-h-[120px] flex-col gap-[8px] overflow-y-auto">
                     {memberOptions.length === 0 && <p className="text-muted-foreground">—</p>}
                     {memberOptions.map((el) => (
@@ -241,7 +244,7 @@ export default function NewTaskDialog() {
                   </div>
                 </fieldset>
                 <fieldset disabled={saving} className="min-w-0 rounded-[6px] border border-border p-[8px]">
-                  <legend className="px-[4px] text-[13px]">{translations.en.labels}</legend>
+                  <legend className="px-[4px] text-[13px]">{t.labels}</legend>
                   <div className="flex max-h-[120px] flex-col gap-[8px] overflow-y-auto">
                     {labelOptions.length === 0 && <p className="text-muted-foreground">—</p>}
                     {labelOptions.map((el) => (

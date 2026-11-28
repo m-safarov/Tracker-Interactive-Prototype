@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { api, errorText } from "@/lib/api";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Invite {
@@ -20,7 +21,8 @@ export default function InvitationPage() {
   const router = useRouter();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   const { data: getInvite, isPending, error } = useQuery({
     queryKey: ["invite", token],

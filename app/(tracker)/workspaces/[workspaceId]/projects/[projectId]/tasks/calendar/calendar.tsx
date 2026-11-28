@@ -7,6 +7,7 @@ import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TaskListPage from "../task-list";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 type ViewData = Parameters<NonNullable<ComponentProps<typeof TaskListPage>["children"]>>[0];
@@ -54,7 +55,8 @@ function renderTask(task: Task, { taskPath, editIssue, saving }: ViewData) {
 
 export default function CalendarPage() {
   const [visibleMonth, setVisibleMonth] = useState(() => new Date());
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
   const today = new Date();
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();

@@ -2,7 +2,6 @@
 
 import { configureStore } from "@reduxjs/toolkit";
 import { cn } from "cn";
-import { Globe } from "lucide-react";
 import Link from "next/link";
 import { Label } from "radix-ui";
 import { useState, type ComponentProps, type ReactNode } from "react";
@@ -46,7 +45,6 @@ export function AuthLayout({ title, className, linkHref, linkText, children }: A
         className,
       )}
     >
-      <LanguageSelect />
       <section aria-labelledby="auth-heading" className="flex w-full max-w-[360px] flex-col">
         <p className="text-xl leading-6 font-semibold">Tracker</p>
         <h1 id="auth-heading" className="mt-5 text-base leading-5 font-semibold">{title}</h1>
@@ -83,26 +81,6 @@ export function FormField({ id, label, error, className, ...props }: FormFieldPr
         )}
       />
       {error && <p id={errorId} role="alert" className="text-sm text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-function LanguageSelect() {
-  return (
-    <div data-slot="native-select-wrapper" className="absolute top-6 right-6 w-[152px]">
-      <select
-        aria-label="Language"
-        defaultValue="en"
-        data-slot="native-select"
-        className="h-8 w-full appearance-none rounded-lg border border-input bg-transparent text-center text-[13.5px] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <option value="en">English</option>
-      </select>
-      <Globe
-        aria-hidden="true"
-        strokeWidth={1.5}
-        className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-[#69717d]"
-      />
     </div>
   );
 }

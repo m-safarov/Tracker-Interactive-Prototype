@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 type Issue = {
@@ -137,7 +138,8 @@ export default function TaskDetailPage() {
     },
   });
 
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
   const task = issue.data;
   const taskKey = task && project.data?.identifier ? project.data.identifier + "-" + task.sequence_id : "—";
   const status = Array.isArray(states.data) ? states.data.find((el) => el.id === task?.state_id)?.name : undefined;

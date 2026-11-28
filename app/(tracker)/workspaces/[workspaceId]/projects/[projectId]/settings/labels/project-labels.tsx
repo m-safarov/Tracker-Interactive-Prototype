@@ -12,6 +12,7 @@ import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import NewLabelDialog from "./dialogs/new-label-dialog";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -33,7 +34,8 @@ export default function ProjectLabelsPage() {
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
 
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   const row = "flex h-[48px] items-center justify-between border-b border-border";
   const label = "rounded-[4px] px-[6px] py-[1px] text-[12px]";

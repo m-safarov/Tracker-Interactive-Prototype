@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, errorText } from "@/lib/api";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 const schema = z.object({
@@ -24,7 +25,8 @@ slug: z
 type WorkspaceForm = z.infer<typeof schema>;
 
 export default function CreateWorkspacePage() {
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
   const router = useRouter();
   const queryClient = useQueryClient();
 

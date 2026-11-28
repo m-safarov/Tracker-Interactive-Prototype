@@ -16,6 +16,7 @@ import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import NewTaskDialog from "../projects/[projectId]/tasks/dialogs/new-task-dialog";
 import createdTranslations from "./created/page-translations.json";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 type Project = { id: string; identifier: string; name: string; is_archived: boolean };
@@ -183,7 +184,8 @@ export default function MyTasksPage() {
       queryClient.invalidateQueries({ queryKey: ["issue", workspaceId, projectId, id] }),
     ]),
   });
-  const t = view === "created" ? createdTranslations.en : translations.en;
+  const { language } = usePreferencesStore();
+  const t = view === "created" ? createdTranslations[language] : translations[language];
   const queries = hasWorkspace
     ? [account, workspace, projects, ...issueQueries, ...stateQueries.filter((el, index) => issueQueries[index]?.data?.length)]
     : [workspaces];
@@ -358,8 +360,8 @@ export default function MyTasksPage() {
           )}
           {!hasWorkspace && !pending && !error && (
             <div className="flex flex-col items-start gap-[8px] px-[24px] py-[16px]">
-              <p role="status">{translations.en.noWorkspace}</p>
-              <Button asChild size="sm"><Link href="/workspaces/new">{translations.en.createWorkspace}</Link></Button>
+              <p role="status">{translations[language].noWorkspace}</p>
+              <Button asChild size="sm"><Link href="/workspaces/new">{translations[language].createWorkspace}</Link></Button>
             </div>
           )}
           {hasWorkspace && !pending && !error && !groups.length && <p role="status" className="px-[24px] py-[16px]">{t.empty}</p>}

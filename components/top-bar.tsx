@@ -1,12 +1,21 @@
+"use client";
+
+import { useEffect } from "react";
 import { Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 
 // Select-и забон дар кунҷи рости боло, дар ҳамаи саҳифаҳо.
-// Танҳо дизайн. Логикаи иваз кардани забонро Dev1 менависад.
 export default function TopBar() {
+  const { language, setLanguage } = usePreferencesStore();
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   return (
     <div className="fixed top-[8px] right-[56px] z-40">
-      <Select defaultValue="en">
+      <Select value={language} onValueChange={setLanguage}>
         <SelectTrigger className="h-[32px] w-[152px]">
           <Globe className="size-[16px] text-muted-foreground" />
           <SelectValue />

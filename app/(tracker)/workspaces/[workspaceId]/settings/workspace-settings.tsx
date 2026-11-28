@@ -17,6 +17,7 @@ import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import { useWorkspaceSettingsStore } from "../../store/workspace-settings-store";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -48,7 +49,8 @@ export default function WorkspaceSettingsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   const { newOwnerId, setNewOwnerId } = useWorkspaceSettingsStore();
   const [transferOpen, setTransferOpen] = useState(false);

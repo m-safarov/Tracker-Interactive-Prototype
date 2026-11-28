@@ -5,7 +5,8 @@
     "createAccount": "Create account",
     "email": "Email",
     "password": "Password",
-    "passwordPreview": "••••••••"
+    "passwordPreview": "••••••••",
+    "signingIn": "Signing in…"
   },
   "tg": {
     "tracker": "Tracker",
@@ -13,7 +14,8 @@
     "createAccount": "Сохтани ҳисоб",
     "email": "Почтаи электронӣ",
     "password": "Рамз",
-    "passwordPreview": "••••••••"
+    "passwordPreview": "••••••••",
+    "signingIn": "Ворид шуда истодааст…"
   },
   "ru": {
     "tracker": "Tracker",
@@ -21,6 +23,7 @@
     "createAccount": "Создать аккаунт",
     "email": "Электронная почта",
     "password": "Пароль",
-    "passwordPreview": "••••••••"
+    "passwordPreview": "••••••••",
+    "signingIn": "Выполняется вход…"
   }
 }

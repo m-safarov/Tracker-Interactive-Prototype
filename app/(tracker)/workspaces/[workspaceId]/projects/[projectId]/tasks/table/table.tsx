@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import TaskListPage from "../task-list";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 function formatDate(value: string | null) {
@@ -10,7 +11,8 @@ function formatDate(value: string | null) {
 }
 
 export default function TablePage() {
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
   const cell = "h-[36px] whitespace-nowrap px-[8px]";
   const head = "whitespace-nowrap px-[8px]";
   const meta = cell + " text-muted-foreground";

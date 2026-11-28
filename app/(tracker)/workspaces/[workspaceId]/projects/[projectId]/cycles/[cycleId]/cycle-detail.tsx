@@ -13,6 +13,7 @@ import TaskTable from "@/components/task-table";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
 import { api, errorText } from "@/lib/api";
 import { useCycleDetailStore } from "../../../../../store/cycle-detail-store";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "./page-translations.json";
 
 interface Workspace {
@@ -62,7 +63,8 @@ export default function CycleDetailPage() {
   const { selectedIds, setSelectedIds } = useCycleDetailStore();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   const { data: getWorkspace } = useQuery({
     queryKey: ["workspace", workspaceId],

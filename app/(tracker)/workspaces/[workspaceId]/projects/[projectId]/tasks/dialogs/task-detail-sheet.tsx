@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TaskDetailPage from "../[taskId]/task-detail";
+import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
 import translations from "../page-translations.json";
 
 export default function TaskDetailSheet() {
@@ -14,7 +15,8 @@ export default function TaskDetailSheet() {
   const router = useRouter();
   const issueId = searchParams.get("issue");
   const path = "/workspaces/" + encodeURIComponent(workspaceId) + "/projects/" + encodeURIComponent(projectId) + "/tasks";
-  const t = translations.en;
+  const { language } = usePreferencesStore();
+  const t = translations[language];
 
   if (!issueId) return null;
 
