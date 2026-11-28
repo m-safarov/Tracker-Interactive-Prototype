@@ -68,7 +68,7 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
       const { data } = await api.get<Workspace>(w);
       return data;
     },
-    enabled: !!slug,
+    enabled: slug !== undefined,
   });
 
   const { data: getProjects = [] } = useQuery({
@@ -77,7 +77,7 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
       const { data } = await api.get<Project[]>(`${w}/projects/`);
       return data;
     },
-    enabled: !!slug,
+    enabled: slug !== undefined,
   });
 
   const { data: getUnread = [] } = useQuery({
@@ -86,7 +86,7 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
       const { data } = await api.get<{ data: { id: string }[] }>(`${w}/notifications/?read=false`);
       return data.data;
     },
-    enabled: !!slug,
+    enabled: slug !== undefined,
   });
 
   const { data: getMe } = useQuery({

@@ -66,7 +66,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const { data: getProjectMembers = [] } = useQuery({

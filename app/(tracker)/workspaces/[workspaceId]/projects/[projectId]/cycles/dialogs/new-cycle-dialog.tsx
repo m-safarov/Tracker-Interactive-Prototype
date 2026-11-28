@@ -55,7 +55,7 @@ export default function NewCycleDialog({ cycle, onClose }: NewCycleDialogProps) 
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const postCycle = useMutation({

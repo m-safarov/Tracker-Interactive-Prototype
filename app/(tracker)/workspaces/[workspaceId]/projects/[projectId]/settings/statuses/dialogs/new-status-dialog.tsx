@@ -51,7 +51,7 @@ export default function NewStatusDialog({ status, onClose }: NewStatusDialogProp
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const postStatus = useMutation({

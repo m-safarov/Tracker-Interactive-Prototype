@@ -49,7 +49,7 @@ export default function NewLabelDialog({ label, onClose }: NewLabelDialogProps) 
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const postLabel = useMutation({
