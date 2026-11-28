@@ -106,6 +106,14 @@ export default function WorkspaceSettingsPage() {
     },
   });
 
+  const postLeaveWorkspace = useMutation({
+    mutationFn: () => api.post(`${w}/leave`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      router.push("/profile");
+    },
+  });
+
   const otherMembers = getMembers.filter((member) => member.role !== "owner");
 
   return (
@@ -172,6 +180,11 @@ export default function WorkspaceSettingsPage() {
                       {errorText(deleteWorkspace.error)}
                     </p>
                   )}
+                  {postLeaveWorkspace.error && (
+                    <p role="alert" className="text-[12px] text-[#DC2626]">
+                      {errorText(postLeaveWorkspace.error)}
+                    </p>
+                  )}
 
                   <div className="flex items-center gap-[6px]">
                     <Button type="submit" disabled={editWorkspace.isPending}>
@@ -184,6 +197,16 @@ export default function WorkspaceSettingsPage() {
                       onClick={() => setTransferOpen(true)}
                     >
                       {t.transfer}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={postLeaveWorkspace.isPending}
+                      onClick={() => {
+                        if (window.confirm("Leave workspace?")) postLeaveWorkspace.mutate();
+                      }}
+                    >
+                      Leave workspace
                     </Button>
                     <Button
                       type="button"

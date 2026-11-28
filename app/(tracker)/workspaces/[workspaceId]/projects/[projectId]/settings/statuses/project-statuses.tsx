@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Circle, CircleCheck, CircleDashed, CircleX, Contrast, MoreHorizontal } from "lucide-react";
@@ -46,6 +47,7 @@ export default function ProjectStatusesPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
+  const [editingStatus, setEditingStatus] = useState<State | null>(null);
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const { language } = usePreferencesStore();
@@ -135,6 +137,7 @@ export default function ProjectStatusesPage() {
             <CardHeader className="items-center border-b border-border px-[16px] py-[8px]">
               <CardTitle className="text-[14px]">{t.statuses}</CardTitle>
               <NewStatusDialog />
+              {editingStatus && <NewStatusDialog status={editingStatus} onClose={() => setEditingStatus(null)} />}
             </CardHeader>
 
             {/* Рӯйхати статусҳо: икона, ном, ранг, тартиб. Ранг аз API меояд, барои ҳамин style. */}
@@ -170,6 +173,7 @@ export default function ProjectStatusesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => setEditingStatus(el)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => editDefaultStatus.mutate(el.id)}>Make default</DropdownMenuItem>
                         <DropdownMenuItem
                           destructive

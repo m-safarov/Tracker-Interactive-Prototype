@@ -27,13 +27,13 @@ export default function InvitationPage() {
   const { data: getInvite, isPending, error } = useQuery({
     queryKey: ["invite", token],
     queryFn: async () => {
-      const { data } = await api.get<Invite>(`/invites/${token}`);
+      const { data } = await api.get<Invite>(`/workspaces/_invites/${token}`);
       return data;
     },
   });
 
   const postAcceptInvite = useMutation({
-    mutationFn: () => api.post(`/invites/${token}/accept`),
+    mutationFn: () => api.post(`/workspaces/_invites/${token}/accept`),
     onSuccess: () => {
       router.push(`/workspaces/${getInvite?.workspace.slug}/projects`);
     },

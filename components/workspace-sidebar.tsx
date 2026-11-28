@@ -2,35 +2,51 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Boxes, ChevronDown, ChevronRight, FolderKanban, Layers, MoreHorizontal, Plus, RefreshCw, Settings, UserCheck } from "lucide-react";
+import {
+  Bell,
+  Boxes,
+  ChevronDown,
+  ChevronRight,
+  FolderKanban,
+  Layers,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Settings,
+  UserCheck,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { api } from "@/lib/api";
 import { postLogout } from "@/features/auth/auth-api";
+import { api } from "@/lib/api";
 
+// Sidebar-и workspace, ки дар ҳамаи саҳифаҳои Dev2 ҳаст. Figma: компоненти "Workspace sidebar".
+// active — кадом банд ранги кабуд дорад.
 interface WorkspaceSidebarProps {
   active?: "my-tasks" | "notifications" | "projects" | "tasks" | "cycles" | "modules" | "settings";
 }
 
-type Workspace = { slug: string; name: string };
-type Project = { id: string; name: string; identifier: string; is_archived: boolean };
-type Account = { display_name: string; avatar_url: string | null };
+interface Workspace {
+  name: string;
+  slug: string;
+}
 
-const proxyOptions = { baseURL: "/api" };
-const projectLinks = [
-  { segment: "tasks", label: "Tasks", icon: Layers },
-  { segment: "cycles", label: "Cycles", icon: RefreshCw },
-  { segment: "modules", label: "Modules", icon: Boxes },
-  { segment: "settings", label: "Settings", icon: Settings },
-];
+interface Project {
+  id: string;
+  name: string;
+  identifier: string;
+  is_archived: boolean;
+}
+
+interface Me {
+  display_name: string;
+}
 
 export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
-  const params = useParams<{ workspaceId?: string; projectId?: string }>();
-  const routeWorkspace = params.workspaceId === "undefined" ? undefined : params.workspaceId;
+  const { workspaceId, projectId } = useParams<{ workspaceId?: string; projectId?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const logout = useMutation({
@@ -40,193 +56,169 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
       router.replace("/sign-in");
     },
   });
-  const [projectChoice, setProjectChoice] = useState<{ workspace: string; project: string | null }>();
-
-  const workspaces = useQuery({
-    queryKey: ["workspaces"],
-    queryFn: async ({ signal }) => {
-      const { data } = await api.get<Workspace[]>("/workspaces", { ...proxyOptions, signal });
-      if (!Array.isArray(data)) throw new Error("Could not load workspaces.");
-      return data;
-    },
-  });
-  const workspaceList = workspaces.data ?? [];
-  const workspace = routeWorkspace
-    ? workspaceList.find((el) => el.slug === routeWorkspace)
-    : workspaceList[0];
-  const workspaceId = routeWorkspace ?? workspace?.slug;
-  const w = workspaceId ? "/workspaces/" + encodeURIComponent(workspaceId) : null;
-
-  const projects = useQuery({
-    queryKey: ["projects", workspaceId],
-    queryFn: async ({ signal }) => {
-      const { data } = await api.get<Project[]>(w + "/projects", { ...proxyOptions, signal });
-      if (!Array.isArray(data)) throw new Error("Could not load projects.");
-      return data;
-    },
-    enabled: !!w,
-  });
-  const notifications = useQuery({
-    queryKey: ["notifications", workspaceId, "sidebar-count"],
-    queryFn: async ({ signal }) => {
-      const { data } = await api.get<{ unread_count: number }>(w + "/notifications", {
-        ...proxyOptions, signal, params: { read: false, limit: 1 },
-      });
-      return data.unread_count ?? 0;
-    },
-    enabled: !!w,
-  });
-  const account = useQuery({
-    queryKey: ["current-account"],
-    queryFn: async ({ signal }) => (await api.get<Account>("/auth/me", { ...proxyOptions, signal })).data,
-  });
-
-  const workspaceName = workspace?.name ?? workspaceId ?? "Workspaces";
-  const accountName = account.data?.display_name || "Profile";
-  const unreadCount = notifications.data ?? 0;
-  const projectList = Array.isArray(projects.data)
-    ? projects.data.filter((el) => !el.is_archived || el.id === params.projectId)
-    : [];
-  const firstActiveProject = projectList.find((el) => !el.is_archived);
-  const noActiveProjects = projects.isSuccess && !firstActiveProject;
-  const routeProject = projectList.find((el) => el.id === params.projectId);
-  const expandedProjectId = projectChoice && projectChoice.workspace === workspaceId
-    ? projectChoice.project
-    : routeProject?.id ?? firstActiveProject?.id;
-  const taskProject = projectList.find((el) => el.id === expandedProjectId && !el.is_archived) ?? firstActiveProject;
-  const taskHref = w && taskProject ? w + "/projects/" + encodeURIComponent(taskProject.id) + "/tasks?newTask=1" : null;
-  const projectsHref = w ? w + "/projects" : "/workspaces/new";
 
   const item = "flex h-[32px] items-center gap-[10px] rounded-[6px] px-[8px] hover:bg-muted";
-  const projectItem = item + " ml-[18px]";
   const activeItem = "bg-primary/10 font-medium text-primary hover:bg-primary/10";
-  const bodyText = "px-[8px] text-[12px] text-muted-foreground";
 
-  function renderProject(project: Project) {
-    const expanded = project.id === expandedProjectId;
-    const p = w + "/projects/" + encodeURIComponent(project.id);
+  const { data: getWorkspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: async () => {
+      const { data } = await api.get<Workspace[]>("/workspaces/");
+      return data;
+    },
+  });
 
-    return (
-      <div key={project.id} className="flex flex-col gap-[2px]">
-        <Button type="button" variant="ghost" className={item + " w-full justify-start font-semibold"} aria-expanded={expanded}
-          onClick={() => { if (workspaceId) setProjectChoice({ workspace: workspaceId, project: expanded ? null : project.id }); }}>
-          <span className="rounded-[4px] border border-border px-[3px] text-[10px] font-normal text-muted-foreground">{project.identifier}</span>
-          <span className="min-w-0 flex-1 truncate text-left">{project.name}</span>
-          {expanded
-            ? <ChevronDown className="ml-auto size-[16px] text-muted-foreground" />
-            : <ChevronRight className="ml-auto size-[16px] text-muted-foreground" />}
-        </Button>
-        {expanded && projectLinks.map((el) => {
-          const selected = active === el.segment && params.projectId === project.id;
-          return (
-            <Link key={el.segment} href={p + "/" + el.segment} aria-current={selected ? "page" : undefined}
-              className={projectItem + (selected ? " " + activeItem : "")}>
-              <el.icon className="size-[16px]" /> {el.label}
-            </Link>
-          );
-        })}
-      </div>
-    );
-  }
+  const slug = workspaceId ?? getWorkspaces[0]?.slug;
+  const w = `/workspaces/${slug}`;
+
+  const { data: getWorkspace } = useQuery({
+    queryKey: ["workspace", slug],
+    queryFn: async () => {
+      const { data } = await api.get<Workspace>(w);
+      return data;
+    },
+    enabled: !!slug,
+  });
+
+  const { data: getProjects = [] } = useQuery({
+    queryKey: ["projects", slug],
+    queryFn: async () => {
+      const { data } = await api.get<Project[]>(`${w}/projects/`);
+      return data;
+    },
+    enabled: !!slug,
+  });
+
+  const { data: getUnread = [] } = useQuery({
+    queryKey: ["notifications", slug, "unread"],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: { id: string }[] }>(`${w}/notifications/?read=false`);
+      return data.data;
+    },
+    enabled: !!slug,
+  });
+
+  const { data: getMe } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const { data } = await api.get<Me>("/auth/me");
+      return data;
+    },
+  });
+
+  const activeProjects = getProjects.filter((project) => !project.is_archived);
+  const openProject = activeProjects.find((project) => project.id === projectId) ?? activeProjects[0];
+  const otherProjects = activeProjects.filter((project) => project.id !== openProject?.id);
+  const p = `${w}/projects/${openProject?.id}`;
 
   return (
     <aside className="flex w-[240px] shrink-0 flex-col gap-[12px] border-r border-border bg-muted/50 p-[12px]">
+      {/* Workspace: рӯйхати ҳамаи workspace-ҳо */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" className="flex h-[36px] items-center justify-start gap-[10px] rounded-[6px] px-[4px] hover:bg-muted">
-            <span className="flex size-[28px] shrink-0 items-center justify-center rounded-[6px] bg-primary/10 text-[13px] font-semibold text-primary">
-              {workspaceId ? workspaceName.charAt(0).toUpperCase() : <FolderKanban className="size-[16px]" />}
+          <button type="button" className="flex h-[36px] items-center gap-[10px] rounded-[6px] px-[4px] hover:bg-muted">
+            <span className="flex size-[28px] items-center justify-center rounded-[6px] bg-primary/10 text-[13px] font-semibold text-primary">
+              {getWorkspace?.name.charAt(0).toUpperCase()}
             </span>
-            <span className="min-w-0 flex-1 truncate text-left text-[14px] font-semibold">{workspaceName}</span>
+            <span className="flex-1 text-left text-[14px] font-semibold">{getWorkspace?.name}</span>
             <ChevronDown className="size-[16px] text-muted-foreground" />
-          </Button>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {workspaceList.map((el) => (
-            <DropdownMenuItem key={el.slug} onSelect={() => router.push("/workspaces/" + encodeURIComponent(el.slug) + "/projects")}>
-              {el.name}
+          {getWorkspaces.map((el) => (
+            <DropdownMenuItem key={el.slug} onSelect={() => router.push(`/workspaces/${el.slug}/projects`)}>
+              {el.name} <span className="text-muted-foreground">({el.slug})</span>
             </DropdownMenuItem>
           ))}
-          {workspaceList.length > 0 && <DropdownMenuSeparator />}
-          {w && !noActiveProjects && <DropdownMenuItem onSelect={() => router.push(w + "/settings")}>Workspace settings</DropdownMenuItem>}
-          <DropdownMenuItem onSelect={() => router.push("/workspaces/new")}>Create workspace</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => router.push("/workspaces/new")}>
+            <Plus className="size-[14px]" /> Create workspace
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {workspaces.isPending && !w && <p role="status" className={bodyText}>Loading workspaces…</p>}
-      {workspaces.isError && (
-        <div className="flex flex-col items-start gap-[4px]">
-          <p role="alert" className={bodyText}>Could not load workspaces.</p>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void workspaces.refetch()}>Try again</Button>
-        </div>
-      )}
 
-      {taskHref ? (
-        <Button asChild size="sm" className="w-full"><Link href={taskHref}><Plus /> New task</Link></Button>
-      ) : (
-        <Button type="button" size="sm" className="w-full" disabled><Plus /> New task</Button>
-      )}
-
-      <nav className="flex flex-col gap-[2px] text-[13px]">
-        <Link href={w ? w + "/my-tasks" : projectsHref} className={item + (active === "my-tasks" ? " " + activeItem : "")}>
-          <UserCheck className="size-[16px]" /> My tasks
-        </Link>
-        <Link href={w ? w + "/notifications" : projectsHref} className={item + (active === "notifications" ? " " + activeItem : "")}>
-          <Bell className="size-[16px]" /> Notifications
-          {unreadCount > 0 && (
-            <span className="ml-auto rounded-[4px] bg-primary/10 px-[6px] text-[11px] font-semibold text-primary">{unreadCount}</span>
+      {slug && (
+        <>
+          {openProject && (
+            <Button asChild size="sm" className="w-full">
+              <Link href={`${p}/tasks`}>
+                <Plus /> New task
+              </Link>
+            </Button>
           )}
-        </Link>
-        <Link href={projectsHref} className={item + (active === "projects" ? " " + activeItem : "")}>
-          <FolderKanban className="size-[16px]" /> Projects
-        </Link>
-        {w && noActiveProjects && (
-          <Link href={w + "/settings"} className={item + (active === "settings" && !params.projectId ? " " + activeItem : "")}>
-            <Settings className="size-[16px]" /> Workspace settings
-          </Link>
-        )}
-      </nav>
 
-      <Separator />
-      <div className="flex min-h-0 flex-col gap-[2px] overflow-y-auto text-[13px]">
-        {w && projects.isPending && <p role="status" className={bodyText}>Loading projects…</p>}
-        {projects.isError && (
-          <div className="flex flex-col items-start gap-[4px]">
-            <p role="alert" className={bodyText}>Could not load projects.</p>
-            <Button type="button" size="sm" variant="ghost" onClick={() => void projects.refetch()}>Try again</Button>
-          </div>
-        )}
-        {projectList.length ? projectList.map((el) => renderProject(el)) : (
-          <>
-            <Link href={projectsHref} className={item + " font-semibold"}>
-              <FolderKanban className="size-[16px]" /> Project
-              <ChevronDown className="ml-auto size-[16px] text-muted-foreground" />
+          {/* Менюи асосӣ */}
+          <nav className="flex flex-col gap-[2px] text-[13px]">
+            <Link href={`${w}/my-tasks`} className={`${item} ${active === "my-tasks" ? activeItem : ""}`}>
+              <UserCheck className="size-[16px]" /> My tasks
             </Link>
-            {projectLinks.map((el) => (
-              <Link key={el.segment} href={w && el.segment === "tasks" ? w + "/projects/select/tasks" : projectsHref} className={projectItem}>
-                <el.icon className="size-[16px]" /> {el.label}
+            <Link href={`${w}/notifications`} className={`${item} ${active === "notifications" ? activeItem : ""}`}>
+              <Bell className="size-[16px]" /> Notifications
+              {getUnread.length > 0 && (
+                <span className="ml-auto rounded-[4px] bg-primary/10 px-[6px] text-[11px] font-semibold text-primary">{getUnread.length}</span>
+              )}
+            </Link>
+            <Link href={`${w}/projects`} className={`${item} ${active === "projects" ? activeItem : ""}`}>
+              <FolderKanban className="size-[16px]" /> Projects
+            </Link>
+          </nav>
+
+          <Separator />
+
+          {/* Проектҳо: кушода — ҳозира, пӯшида — дигарон */}
+          <div className="flex flex-col gap-[2px] text-[13px]">
+            {openProject && (
+              <>
+                <Link href={`${p}/tasks`} className={`${item} font-semibold`}>
+                  <span className="rounded-[4px] border border-border px-[3px] text-[10px] font-normal text-muted-foreground">
+                    {openProject.identifier}
+                  </span>
+                  {openProject.name}
+                  <ChevronDown className="ml-auto size-[16px] text-muted-foreground" />
+                </Link>
+                <Link href={`${p}/tasks`} className={`${item} ml-[18px] ${active === "tasks" ? activeItem : ""}`}>
+                  <Layers className="size-[16px]" /> Tasks
+                </Link>
+                <Link href={`${p}/cycles`} className={`${item} ml-[18px] ${active === "cycles" ? activeItem : ""}`}>
+                  <RefreshCw className="size-[16px]" /> Cycles
+                </Link>
+                <Link href={`${p}/modules`} className={`${item} ml-[18px] ${active === "modules" ? activeItem : ""}`}>
+                  <Boxes className="size-[16px]" /> Modules
+                </Link>
+                <Link href={`${p}/settings`} className={`${item} ml-[18px] ${active === "settings" ? activeItem : ""}`}>
+                  <Settings className="size-[16px]" /> Settings
+                </Link>
+              </>
+            )}
+
+            {otherProjects.map((el, index) => (
+              <Link key={el.id} href={`${w}/projects/${el.id}/tasks`} className={`${item} ${index === 0 ? "mt-[8px]" : ""}`}>
+                <span className="rounded-[4px] border border-border px-[3px] text-[10px] text-muted-foreground">{el.identifier}</span>
+                {el.name}
+                <ChevronRight className="ml-auto size-[16px] text-muted-foreground" />
               </Link>
             ))}
-            {noActiveProjects && <p className={bodyText}>Use New project on the Projects page to get started.</p>}
-            {!w && workspaces.isSuccess && <p className={bodyText}>Create a workspace to get started.</p>}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
+      {/* Корбари ҷорӣ дар поён */}
       <div className="mt-auto flex flex-col gap-[12px]">
         <Separator />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" aria-label={accountName + " menu"} className="flex w-full items-center justify-start gap-[10px] px-0 text-[14px]">
-              <Avatar name={accountName} src={account.data?.avatar_url ?? undefined} className="bg-violet-100 text-violet-700" />
-              <span className="min-w-0 flex-1 truncate text-left">{accountName}</span>
-              <MoreHorizontal className="size-[16px] text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onSelect={() => router.push("/profile")}>Profile</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => { if (!logout.isPending) logout.mutate(); }}>Log out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-[10px] text-[14px]">
+          <Avatar name={getMe?.display_name ?? ""} className="bg-violet-100 text-violet-700" />
+          <span className="flex-1">{getMe?.display_name}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label="Account menu">
+                <MoreHorizontal className="size-[16px] text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => { if (!logout.isPending) logout.mutate(); }}>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </aside>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
@@ -34,6 +35,7 @@ export default function CyclesPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
+  const [editingCycle, setEditingCycle] = useState<Cycle | null>(null);
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const { language } = usePreferencesStore();
@@ -86,6 +88,7 @@ export default function CyclesPage() {
         <PageHeading crumbs={[getWorkspace?.name ?? "", getProject?.name ?? "", t.cycles]} title={t.cycles}>
           <NewCycleDialog />
         </PageHeading>
+        {editingCycle && <NewCycleDialog cycle={editingCycle} onClose={() => setEditingCycle(null)} />}
 
         {isPending && <p className="px-[24px] py-[12px] text-[12px] text-muted-foreground">Loading...</p>}
         {(error || deleteCycle.error) && (
@@ -113,6 +116,7 @@ export default function CyclesPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setEditingCycle(el)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem
                     destructive
                     onSelect={() => {
@@ -145,6 +149,7 @@ export default function CyclesPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setEditingCycle(el)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem
                     destructive
                     onSelect={() => {
@@ -177,6 +182,7 @@ export default function CyclesPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setEditingCycle(el)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem
                     destructive
                     onSelect={() => {

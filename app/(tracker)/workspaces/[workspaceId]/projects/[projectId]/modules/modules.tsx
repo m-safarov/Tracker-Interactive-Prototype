@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
@@ -41,6 +42,7 @@ export default function ModulesPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const { language } = usePreferencesStore();
@@ -98,6 +100,7 @@ export default function ModulesPage() {
         <PageHeading crumbs={[getWorkspace?.name ?? "", getProject?.name ?? "", t.modules]} title={t.modules}>
           <NewModuleDialog />
         </PageHeading>
+        {editingModule && <NewModuleDialog module={editingModule} onClose={() => setEditingModule(null)} />}
 
         {isPending && <p className="px-[24px] py-[12px] text-[12px] text-muted-foreground">Loading...</p>}
         {(error || deleteModule.error) && (
@@ -134,6 +137,7 @@ export default function ModulesPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setEditingModule(el)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem
                     destructive
                     onSelect={() => {

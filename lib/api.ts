@@ -1,22 +1,16 @@
 import axios from "axios";
 
+// Ҳамаи дархостҳо ба proxy-и Next (/api/workspaces/...) мераванд; proxy cookie-и HttpOnly-ро ҳамчун token ба backend мефиристад.
 export const api = axios.create({
   baseURL: "/api",
-});
-
-api.interceptors.request.use((config) => {
-  if (config.url?.startsWith("/invites/")) config.url = "/workspaces/_invites/" + config.url.slice("/invites/".length);
-  return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && typeof window !== "undefined") {
-      const { pathname, search, hash } = window.location;
-      if (!["/sign-in", "/sign-up", "/login"].includes(pathname)) {
-        window.location.replace("/sign-in?next=" + encodeURIComponent(pathname + search + hash));
-      }
+    const path = window.location.pathname;
+    if (error.response?.status === 401 && path !== "/sign-in" && path !== "/sign-up") {
+      window.location.replace(`/sign-in?next=${encodeURIComponent(path)}`);
     }
     return Promise.reject(error);
   },
