@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Settings } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,23 +11,79 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { api, errorText } from "@/lib/api";
 import NewProjectDialog from "./dialogs/new-project-dialog";
 import translations from "./page-translations.json";
+
+interface Workspace {
+  name: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  identifier: string;
+  description: string | null;
+  lead_id: string | null;
+  is_archived: boolean;
+  created_at: string;
+}
+
+interface Member {
+  user_id: string;
+  user: { display_name: string };
+}
 
 // Dev 2 — Рӯйхати проектҳои фаъол. Figma: фрейми "Projects".
 export default function ProjectsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const w = `/workspaces/${workspaceId}`;
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-  // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const t = translations.en;
+
+  const { data: getWorkspace } = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<Workspace>(w);
+      return data;
+    },
+  });
+
+  const { data: getProjects = [], isPending, error } = useQuery({
+    queryKey: ["projects", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<Project[]>(`${w}/projects/`);
+      return data;
+    },
+  });
+
+  const { data: getMembers = [] } = useQuery({
+    queryKey: ["members", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<Member[]>(`${w}/members`);
+      return data;
+    },
+  });
+
+  const editArchiveProject = useMutation({
+    mutationFn: (id: string) => api.patch(`${w}/projects/${id}`, { is_archived: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] });
+    },
+  });
+
+  const activeProjects = getProjects.filter((project) => !project.is_archived);
+
+  const isEmpty = !isPending && !error && activeProjects.length === 0;
 
   return (
     <div className="flex min-h-screen">
       <WorkspaceSidebar active="projects" />
 
       <main className="flex flex-1 flex-col">
-        <PageHeading crumbs={["Demo Team", t.projects]} title={t.projects}>
+        <PageHeading crumbs={[getWorkspace?.name ?? "", t.projects]} title={t.projects}>
           <NewProjectDialog />
         </PageHeading>
 
@@ -42,7 +99,15 @@ export default function ProjectsPage() {
           </TabsList>
         </Tabs>
 
-        {/* Ҷадвали проектҳо. Намуна: баъд ба .map() бо API иваз мешавад. */}
+        {isPending && <p className="px-[24px] py-[12px] text-[12px] text-muted-foreground">Loading...</p>}
+        {(error || editArchiveProject.error) && (
+          <p role="alert" className="px-[24px] py-[12px] text-[13px] text-[#DC2626]">
+            {errorText(error || editArchiveProject.error)}
+          </p>
+        )}
+        {isEmpty && <p className="px-[24px] py-[12px] text-[12px] text-muted-foreground">No projects yet</p>}
+
+        {/* Ҷадвали проектҳо */}
         <Table>
           <TableHeader>
             <TableRow>
@@ -53,104 +118,49 @@ export default function ProjectsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
-              <TableCell className="pl-[24px]">
-                <div className="flex items-center gap-[14px]">
-                  <span className="rounded-[4px] border border-border bg-muted px-[6px] py-[2px] text-[12px] text-muted-foreground">WEB</span>
-                  <div>
-                    <p className="font-semibold">Website</p>
-                    <p className="text-[12px] text-muted-foreground">Checkout, onboarding and the public website</p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-[8px] text-muted-foreground">
-                  <Avatar name="Madina Rahimova" className="bg-pink-100 text-pink-700" /> Madina Rahimova
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">18 Nov</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Project menu">
-                      <MoreHorizontal />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <Settings /> {t.settings}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>{t.archive}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-
-            <TableRow>
-              <TableCell className="pl-[24px]">
-                <div className="flex items-center gap-[14px]">
-                  <span className="rounded-[4px] border border-border bg-muted px-[6px] py-[2px] text-[12px] text-muted-foreground">MOB</span>
-                  <div>
-                    <p className="font-semibold">Mobile App</p>
-                    <p className="text-[12px] text-muted-foreground">iOS and Android app releases</p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-[8px] text-muted-foreground">
-                  <Avatar name="Daler Saidov" className="bg-sky-100 text-sky-700" /> Daler Saidov
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">19 Nov</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Project menu">
-                      <MoreHorizontal />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <Settings /> {t.settings}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>{t.archive}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-
-            <TableRow>
-              <TableCell className="pl-[24px]">
-                <div className="flex items-center gap-[14px]">
-                  <span className="rounded-[4px] border border-border bg-muted px-[6px] py-[2px] text-[12px] text-muted-foreground">OPS</span>
-                  <div>
-                    <p className="font-semibold">Operations</p>
-                    <p className="text-[12px] text-muted-foreground">Internal systems, infrastructure and documentation</p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-[8px] text-muted-foreground">
-                  <Avatar name="Farrukh Karimov" className="bg-violet-100 text-violet-700" /> Farrukh Karimov
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">20 Nov</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Project menu">
-                      <MoreHorizontal />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <Settings /> {t.settings}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>{t.archive}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
+            {activeProjects.map((el) => {
+              const leadName = getMembers.find((member) => member.user_id === el.lead_id)?.user.display_name;
+              const created = new Date(el.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+              return (
+                <TableRow key={el.id}>
+                  <TableCell className="pl-[24px]">
+                    <div className="flex items-center gap-[14px]">
+                      <span className="rounded-[4px] border border-border bg-muted px-[6px] py-[2px] text-[12px] text-muted-foreground">
+                        {el.identifier}
+                      </span>
+                      <div>
+                        <p className="font-semibold">{el.name}</p>
+                        <p className="text-[12px] text-muted-foreground">{el.description}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {leadName && (
+                      <div className="flex items-center gap-[8px] text-muted-foreground">
+                        <Avatar name={leadName} className="bg-pink-100 text-pink-700" />
+                        {leadName}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{created}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="ghost" size="icon-sm" aria-label="Project menu">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => router.push(`${w}/projects/${el.id}/settings`)}>
+                          <Settings /> {t.settings}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => editArchiveProject.mutate(el.id)}>{t.archive}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </main>

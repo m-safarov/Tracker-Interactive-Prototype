@@ -2,33 +2,85 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { api, errorText } from "@/lib/api";
 import translations from "./page-translations.json";
+
+interface Workspace {
+  name: string;
+}
+
+interface Notification {
+  id: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  actor: { display_name: string };
+}
+
+const typeText: Record<string, string> = {
+  issue_assigned: "assigned a task to you",
+  comment_added: "commented on a task",
+};
 
 // Dev 2 — Ҳамаи огоҳиномаҳо. Figma: фрейми "Notifications".
 export default function NotificationsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const w = `/workspaces/${workspaceId}`;
+  const queryClient = useQueryClient();
 
   // Матнҳо аз page-translations.json. Логикаи иваз кардани забонро Dev1 менависад.
   const t = translations.en;
 
   // Сатри огоҳинома: unread — заминаи кабуди сабук ва нуқтаи кабуд.
-  const row = "flex h-[64px] items-center gap-[12px] border-b border-border px-[24px]";
+  const row = "flex h-[64px] w-full items-center gap-[12px] border-b border-border px-[24px] text-left";
   const unread = "bg-primary/5";
   const dot = "size-[6px] rounded-full bg-primary";
+
+  const { data: getWorkspace } = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<Workspace>(w);
+      return data;
+    },
+  });
+
+  const { data: getNotifications = [], isPending, error } = useQuery({
+    queryKey: ["notifications", workspaceId],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Notification[] }>(`${w}/notifications/`);
+      return data.data;
+    },
+  });
+
+  const postReadNotification = useMutation({
+    mutationFn: (id: string) => api.post(`${w}/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", workspaceId] });
+    },
+  });
+
+  const postReadAll = useMutation({
+    mutationFn: () => api.post(`${w}/notifications/read-all`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", workspaceId] });
+    },
+  });
+
+  const isEmpty = !isPending && !error && getNotifications.length === 0;
 
   return (
     <div className="flex min-h-screen">
       <WorkspaceSidebar active="notifications" />
 
       <main className="flex flex-1 flex-col">
-        <PageHeading crumbs={["Demo Team", t.notifications]} title={t.notifications}>
-          <Button type="button" size="sm" variant="outline">
+        <PageHeading crumbs={[getWorkspace?.name ?? "", t.notifications]} title={t.notifications}>
+          <Button type="button" size="sm" variant="outline" disabled={postReadAll.isPending} onClick={() => postReadAll.mutate()}>
             {t.markAll}
           </Button>
         </PageHeading>
@@ -45,70 +97,34 @@ export default function NotificationsPage() {
           </TabsList>
         </Tabs>
 
-        {/* Намуна: баъд ба .map() бо API иваз мешавад. */}
-        <div className={`${row} ${unread}`}>
-          <Avatar name="Madina Rahimova" className="size-[32px] bg-pink-100 text-pink-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Madina Rahimova</p>
-            <p className="text-muted-foreground">assigned WEB-1 to you</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">24 Nov</span>
-          <span className={dot} />
-        </div>
-        <div className={`${row} ${unread}`}>
-          <Avatar name="Daler Saidov" className="size-[32px] bg-sky-100 text-sky-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Daler Saidov</p>
-            <p className="text-muted-foreground">commented on WEB-1</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">24 Nov</span>
-          <span className={dot} />
-        </div>
-        <div className={`${row} ${unread}`}>
-          <Avatar name="Nigina Usmonova" className="size-[32px] bg-emerald-100 text-emerald-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Nigina Usmonova</p>
-            <p className="text-muted-foreground">mentioned you in WEB-10</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">25 Nov</span>
-          <span className={dot} />
-        </div>
-        <div className={`${row} ${unread}`}>
-          <Avatar name="Anna Petrova" className="size-[32px] bg-orange-100 text-orange-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Anna Petrova</p>
-            <p className="text-muted-foreground">commented on WEB-7</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">25 Nov</span>
-          <span className={dot} />
-        </div>
-        <div className={row}>
-          <Avatar name="Madina Rahimova" className="size-[32px] bg-pink-100 text-pink-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Madina Rahimova</p>
-            <p className="text-muted-foreground">mentioned you in WEB-5</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">23 Nov</span>
-          <span className="size-[6px]" />
-        </div>
-        <div className={row}>
-          <Avatar name="Daler Saidov" className="size-[32px] bg-sky-100 text-sky-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Daler Saidov</p>
-            <p className="text-muted-foreground">assigned WEB-3 to you</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">22 Nov</span>
-          <span className="size-[6px]" />
-        </div>
-        <div className={row}>
-          <Avatar name="Nigina Usmonova" className="size-[32px] bg-emerald-100 text-emerald-700" />
-          <div className="flex-1 text-[13px]">
-            <p className="font-semibold">Nigina Usmonova</p>
-            <p className="text-muted-foreground">commented on WEB-9</p>
-          </div>
-          <span className="w-[60px] text-[12px] text-muted-foreground">21 Nov</span>
-          <span className="size-[6px]" />
-        </div>
+        {isPending && <p className="px-[24px] py-[12px] text-[12px] text-muted-foreground">Loading...</p>}
+        {(error || postReadNotification.error || postReadAll.error) && (
+          <p role="alert" className="px-[24px] py-[12px] text-[13px] text-[#DC2626]">
+            {errorText(error || postReadNotification.error || postReadAll.error)}
+          </p>
+        )}
+        {isEmpty && <p className="px-[24px] py-[24px] text-[12px] text-muted-foreground">No notifications yet</p>}
+
+        {getNotifications.map((el) => (
+          <button
+            key={el.id}
+            type="button"
+            className={el.is_read ? row : `${row} ${unread}`}
+            onClick={() => {
+              if (!el.is_read) postReadNotification.mutate(el.id);
+            }}
+          >
+            <Avatar name={el.actor.display_name} className="size-[32px] bg-pink-100 text-pink-700" />
+            <div className="flex-1 text-[13px]">
+              <p className="font-semibold">{el.actor.display_name}</p>
+              <p className="text-muted-foreground">{typeText[el.type] ?? el.type}</p>
+            </div>
+            <span className="w-[60px] text-[12px] text-muted-foreground">
+              {new Date(el.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+            </span>
+            <span className={el.is_read ? "size-[6px]" : dot} />
+          </button>
+        ))}
       </main>
     </div>
   );
