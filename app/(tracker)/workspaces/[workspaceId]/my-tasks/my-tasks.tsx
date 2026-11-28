@@ -137,7 +137,10 @@ export default function MyTasksPage() {
 
   const account = useQuery({
     queryKey: ["current-account"],
-    queryFn: async ({ signal }) => (await api.get<{ id: string }>("/auth/me", { ...proxyOptions, signal })).data,
+    queryFn: async function getMe({ signal }) {
+      const { data } = await api.get<{ id: string }>("/auth/me", { ...proxyOptions, signal });
+      return data;
+    },
     enabled: hasWorkspace,
     gcTime: 0,
     retry: false,
@@ -150,7 +153,7 @@ export default function MyTasksPage() {
   });
   const projects = useQuery({
     queryKey: ["projects", workspaceId],
-    queryFn: async ({ signal }) => {
+    queryFn: async function getProjects({ signal }) {
       const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { ...proxyOptions, signal });
       return readList(data, "projects");
     },
@@ -204,6 +207,7 @@ export default function MyTasksPage() {
     }));
   });
   const groups = groupTasks(tasks);
+  const projectsWithTasks = projectList.filter((el) => tasks.some((task) => task.project.id === el.id));
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const tabLink = "flex h-[39px] items-center px-[2px] pb-[0px] data-[state=active]:text-primary";
@@ -366,7 +370,14 @@ export default function MyTasksPage() {
           )}
           {hasWorkspace && !pending && !error && !groups.length && <p role="status" className="px-[24px] py-[16px]">{t.empty}</p>}
           {editIssue.error && <p role="alert" className="px-[24px] py-[8px] text-destructive">{errorText(editIssue.error)}</p>}
-          {!pending && !error && groups.map((el) => renderGroup(el))}
+          {!pending && !error && (view === "created"
+            ? projectsWithTasks.map((el) => (
+              <section key={el.id}>
+                <h2 className="px-[24px] py-[10px] text-[14px] font-semibold">{el.name}</h2>
+                {groupTasks(tasks.filter((task) => task.project.id === el.id)).map((el) => renderGroup(el))}
+              </section>
+            ))
+            : groups.map((el) => renderGroup(el)))}
         </div>
       </main>
     </div>
