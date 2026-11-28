@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
@@ -20,6 +21,7 @@ import { api, errorText } from "@/lib/api";
 import NewTaskDialog from "./dialogs/new-task-dialog";
 import TaskDetailSheet from "./dialogs/task-detail-sheet";
 import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
+import { useTaskListStore } from "@/app/(tracker)/workspaces/store/task-list-store";
 import translations from "./page-translations.json";
 
 const stateIcons = {
@@ -57,6 +59,8 @@ type Issue = {
   estimate_points: number | null;
 };
 type IssuePage = { data: Issue[]; next_cursor: string | null };
+type ProjectMember = { user_id: string; user: { display_name: string } };
+type ProjectLabel = { id: string; name: string };
 type Task = Issue & { taskKey: string };
 type IssueChanges = { state_id?: string; due_date?: string | null };
 type ViewProps = {
@@ -79,7 +83,7 @@ const projectFormSchema = z.object({
 });
 const proxyOptions = { baseURL: "/api" };
 
-async function getIssues(path: string, signal: AbortSignal) {
+async function getIssues(path: string, filters: Record<string, string | undefined>, signal: AbortSignal) {
   const issues: Issue[] = [];
   let cursor: string | null = null;
 
@@ -87,7 +91,7 @@ async function getIssues(path: string, signal: AbortSignal) {
     const { data }: { data: IssuePage } = await api.get<IssuePage>(path + "/issues", {
       ...proxyOptions,
       signal,
-      params: { limit: 100, cursor },
+      params: { ...filters, limit: 100, cursor },
     });
     if (!Array.isArray(data?.data) || (data.next_cursor && data.next_cursor === cursor)) {
       throw new Error("Could not read the project tasks.");
@@ -115,13 +119,29 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const filters = useTaskListStore((store) => store.filtersByProject[projectId]);
+  const setFilters = useTaskListStore((store) => store.setFilters);
+  const search = filters?.search ?? "";
+  const [searchText, setSearchText] = useState(search.trim());
+  const [showFilters, setShowFilters] = useState(false);
   const [showDates, setShowDates] = useState(true);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(projectFormSchema),
     defaultValues: { name: "", identifier: "" },
   });
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchText(search.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const issueFilters = {
+    search: searchText || undefined,
+    state: filters?.state || undefined,
+    priority: filters?.priority || undefined,
+    assignee: filters?.assignee || undefined,
+    label: filters?.label || undefined,
+  };
 
   const workspace = useQuery({
     queryKey: ["workspace", workspaceId],
@@ -150,9 +170,23 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
     },
     enabled: hasProjectId,
   });
+  const members = useQuery({
+    queryKey: ["project-members", workspaceId, projectId],
+    queryFn: async function getMembers({ signal }) {
+      return (await api.get<ProjectMember[]>(path + "/members", { signal })).data;
+    },
+    enabled: hasProjectId && showFilters,
+  });
+  const labels = useQuery({
+    queryKey: ["labels", workspaceId, projectId],
+    queryFn: async function getLabels({ signal }) {
+      return (await api.get<ProjectLabel[]>(path + "/labels", { signal })).data;
+    },
+    enabled: hasProjectId && showFilters,
+  });
   const issues = useQuery({
-    queryKey: issueKey,
-    queryFn: ({ signal }) => getIssues(path, signal),
+    queryKey: [...issueKey, issueFilters],
+    queryFn: ({ signal }) => getIssues(path, issueFilters, signal),
     enabled: hasProjectId,
   });
   const postProject = useMutation({
@@ -168,8 +202,7 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   const editIssue = useMutation({
     mutationFn: ({ id, changes }: { id: string; changes: IssueChanges }) =>
       api.patch<Issue>(path + "/issues/" + encodeURIComponent(id), changes, proxyOptions),
-    onSuccess: async ({ data }, { id }) => {
-      queryClient.setQueryData<Issue[]>(issueKey, (current) => current?.map((el) => el.id === id ? data : el));
+    onSuccess: async (_, { id }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: issueKey }),
         queryClient.invalidateQueries({ queryKey: ["issue", workspaceId, projectId, id] }),
@@ -185,13 +218,11 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   const loading = queries.some((el) => el.isPending);
   const activeProjects = Array.isArray(projects.data) ? projects.data.filter((el) => !el.is_archived) : [];
   const stateList = Array.isArray(states.data) ? [...states.data].sort((left, right) => left.order - right.order) : [];
-  const selectedState = stateList.find((el) => el.id === statusFilter);
-  const searchText = search.trim().toLowerCase();
   const identifier = project.data?.identifier;
   const tasks = (issues.data ?? [])
-    .map((el) => ({ ...el, taskKey: identifier ? identifier + "-" + el.sequence_id : "—" }))
-    .filter((el) => (!selectedState || el.state_id === selectedState.id)
-      && (el.title.toLowerCase().includes(searchText) || el.taskKey.toLowerCase().includes(searchText)));
+    .map((el) => ({ ...el, taskKey: identifier ? identifier + "-" + el.sequence_id : "—" }));
+  const activeFilterCount = [filters?.state, filters?.priority, filters?.assignee, filters?.label].filter(Boolean).length;
+  const filterError = members.error || labels.error;
   const otherTasks = tasks.filter((el) => !stateList.some((state) => state.id === el.state_id));
   const today = new Date().setHours(0, 0, 0, 0);
 
@@ -299,22 +330,13 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
             <div className="relative">
               <Label htmlFor="task-search" className="sr-only">{t.search}</Label>
               <Search className="pointer-events-none absolute top-[8px] left-[9px] size-[15px] text-muted-foreground" aria-hidden="true" />
-              <Input id="task-search" type="search" value={search} disabled={!hasProjectId} onChange={(event) => setSearch(event.target.value)}
+              <Input id="task-search" type="search" value={search} disabled={!hasProjectId} onChange={(event) => setFilters(projectId, { search: event.target.value })}
                 placeholder={t.search} className="h-[32px] w-[144px] pl-[30px]" />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="min-w-[97px]" disabled={!hasProjectId || !stateList.length}>
-                  <ListFilter />{selectedState?.name ?? t.filters}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onSelect={() => setStatusFilter("")}>All statuses</DropdownMenuItem>
-                {stateList.map((el) => (
-                  <DropdownMenuItem key={el.id} onSelect={() => setStatusFilter(el.id)}>{el.name}</DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button type="button" variant="outline" size="sm" className="min-w-[97px]" disabled={!hasProjectId}
+              aria-expanded={showFilters} aria-controls="task-filters" onClick={() => setShowFilters(!showFilters)}>
+              <ListFilter />{t.filters}{activeFilterCount > 0 && ` (${activeFilterCount})`}
+            </Button>
             {view !== "calendar" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -329,6 +351,58 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
             )}
           </div>
         </div>
+
+        {hasProjectId && showFilters && (
+          <div id="task-filters" className="flex flex-wrap items-end gap-[12px] border-b border-border px-[22px] py-[10px]">
+            <div role="group" aria-label={t.filterStatus} className="grid min-w-[144px] gap-[4px] text-[13px]">
+              <span>{t.filterStatus}</span>
+              <Select value={filters?.state || "all"} onValueChange={(value) => setFilters(projectId, { state: value === "all" ? "" : value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allStatuses}</SelectItem>
+                  {stateList.map((el) => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div role="group" aria-label={t.filterPriority} className="grid min-w-[144px] gap-[4px] text-[13px]">
+              <span>{t.filterPriority}</span>
+              <Select value={filters?.priority || "all"} onValueChange={(value) => setFilters(projectId, { priority: value === "all" ? "" : value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allPriorities}</SelectItem>
+                  {(Object.keys(priorities) as (keyof typeof priorities)[]).map((el) => (
+                    <SelectItem key={el} value={el}>{t.priorityNames[el]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div role="group" aria-label={t.assignees} className="grid min-w-[144px] gap-[4px] text-[13px]">
+              <span>{t.assignees}</span>
+              <Select value={filters?.assignee || "all"} disabled={members.isPending} onValueChange={(value) => setFilters(projectId, { assignee: value === "all" ? "" : value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allAssignees}</SelectItem>
+                  {members.data?.map((el) => <SelectItem key={el.user_id} value={el.user_id}>{el.user.display_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div role="group" aria-label={t.labels} className="grid min-w-[144px] gap-[4px] text-[13px]">
+              <span>{t.labels}</span>
+              <Select value={filters?.label || "all"} disabled={labels.isPending} onValueChange={(value) => setFilters(projectId, { label: value === "all" ? "" : value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allLabels}</SelectItem>
+                  {labels.data?.map((el) => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {activeFilterCount > 0 && (
+              <Button type="button" variant="ghost" size="sm"
+                onClick={() => setFilters(projectId, { state: "", priority: "", assignee: "", label: "" })}>{t.clearFilters}</Button>
+            )}
+            {filterError && <p role="alert" className="basis-full text-destructive">{errorText(filterError)}</p>}
+          </div>
+        )}
 
         {!queryError && loading && <p role="status" className="px-[24px] py-[16px]">Loading…</p>}
         {queryError && (

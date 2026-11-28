@@ -115,6 +115,20 @@
       "viewCreated": "Go to Created by me",
       "cancel": "Cancel",
       "close": "Close"
+    },
+    "filterStatus": "Status",
+    "filterPriority": "Priority",
+    "allStatuses": "All statuses",
+    "allPriorities": "All priorities",
+    "allAssignees": "All assignees",
+    "allLabels": "All labels",
+    "clearFilters": "Clear filters",
+    "priorityNames": {
+      "none": "No priority",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
     }
   },
   "tg": {
@@ -233,6 +247,20 @@
       "viewCreated": "Ба «Сохтаи ман» гузаред",
       "cancel": "Бекор кардан",
       "close": "Пӯшидан"
+    },
+    "filterStatus": "Ҳолат",
+    "filterPriority": "Афзалият",
+    "allStatuses": "Ҳамаи ҳолатҳо",
+    "allPriorities": "Ҳамаи афзалиятҳо",
+    "allAssignees": "Ҳамаи иҷрокунандагон",
+    "allLabels": "Ҳамаи нишонаҳо",
+    "clearFilters": "Тоза кардани филтрҳо",
+    "priorityNames": {
+      "none": "Бе афзалият",
+      "low": "Паст",
+      "medium": "Миёна",
+      "high": "Баланд",
+      "urgent": "Фаврӣ"
     }
   },
   "ru": {
@@ -351,6 +379,20 @@
       "viewCreated": "Перейти в «Созданные мной»",
       "cancel": "Отмена",
       "close": "Закрыть"
+    },
+    "filterStatus": "Статус",
+    "filterPriority": "Приоритет",
+    "allStatuses": "Все статусы",
+    "allPriorities": "Все приоритеты",
+    "allAssignees": "Все исполнители",
+    "allLabels": "Все метки",
+    "clearFilters": "Сбросить фильтры",
+    "priorityNames": {
+      "none": "Без приоритета",
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "urgent": "Срочный"
     }
   }
 }
