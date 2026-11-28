@@ -60,7 +60,7 @@ type Issue = {
 };
 type IssuePage = { data: Issue[]; next_cursor: string | null };
 type ProjectMember = { user_id: string; user: { display_name: string } };
-type ProjectLabel = { id: string; name: string };
+type ProjectLabel = { id: string; name: string; color: string };
 type Task = Issue & { taskKey: string };
 type IssueChanges = { state_id?: string; due_date?: string | null };
 type ViewProps = {
@@ -400,7 +400,14 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allLabels}</SelectItem>
-                  {labels.data?.map((el) => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+                  {labels.data?.map((el) => (
+                    <SelectItem key={el.id} value={el.id}>
+                      <span className="flex items-center gap-[6px]">
+                        <span aria-hidden="true" className="size-[8px] rounded-full" style={{ backgroundColor: el.color }} />
+                        {el.name}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

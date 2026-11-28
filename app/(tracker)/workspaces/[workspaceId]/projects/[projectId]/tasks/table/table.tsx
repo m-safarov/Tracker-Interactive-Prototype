@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import TaskListPage from "../task-list";
 import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preferences-store";
@@ -34,19 +35,29 @@ export default function TablePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.map((el) => (
-                <TableRow key={el.id} className="hover:bg-muted/50">
-                  <TableCell className={meta}>{el.taskKey}</TableCell>
-                  <TableCell className="h-[36px] min-w-[180px] px-[8px]">
-                    <Link href={taskPath + "/" + encodeURIComponent(el.id)} className="font-medium hover:underline">{el.title}</Link>
-                  </TableCell>
-                  <TableCell className={cell}>{states.find((state) => state.id === el.state_id)?.name ?? "—"}</TableCell>
-                  <TableCell className={cell + " capitalize"}>{el.priority === "none" ? "—" : el.priority}</TableCell>
-                  {showDates && <TableCell className={meta}>{formatDate(el.start_date)}</TableCell>}
-                  {showDates && <TableCell className={meta}>{formatDate(el.due_date)}</TableCell>}
-                  <TableCell className={meta}>{el.estimate_points ?? "—"}</TableCell>
-                </TableRow>
-              ))}
+              {tasks.map((el) => {
+                const status = states.find((state) => state.id === el.state_id);
+                return (
+                  <TableRow key={el.id} className="hover:bg-muted/50">
+                    <TableCell className={meta}>{el.taskKey}</TableCell>
+                    <TableCell className="h-[36px] min-w-[180px] px-[8px]">
+                      <Link href={taskPath + "/" + encodeURIComponent(el.id)} className="font-medium hover:underline">{el.title}</Link>
+                    </TableCell>
+                    <TableCell className={cell}>
+                      {status ? (
+                        <Badge variant="outline">
+                          <span aria-hidden="true" className="size-[8px] rounded-full" style={{ backgroundColor: status.color }} />
+                          {status.name}
+                        </Badge>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell className={cell + " capitalize"}>{el.priority === "none" ? "—" : el.priority}</TableCell>
+                    {showDates && <TableCell className={meta}>{formatDate(el.start_date)}</TableCell>}
+                    {showDates && <TableCell className={meta}>{formatDate(el.due_date)}</TableCell>}
+                    <TableCell className={meta}>{el.estimate_points ?? "—"}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "radix-ui";
 import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,7 +37,7 @@ import {
   type ChangePasswordBody,
   type UpdateProfileBody,
 } from "@/features/auth/schema";
-import { errorText } from "@/lib/api";
+import { api, errorText } from "@/lib/api";
 
 import translations from "./page-translations.json";
 
@@ -59,6 +59,15 @@ function ProfileContent() {
   const { data: profile, error, isLoading, refetch } = useGetProfileQuery();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const workspaces = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: async function getWorkspaces({ signal }) {
+      const { data } = await api.get<{ name: string; slug: string }[]>("/workspaces", { signal });
+      return data;
+    },
+    enabled: !!profile,
+  });
+  const workspace = workspaces.data?.[0];
   const logout = useMutation({
     mutationFn: postLogout,
     onSuccess: () => {
@@ -99,6 +108,17 @@ function ProfileContent() {
           <div className="grid max-w-[592px] gap-5">
             <ProfileForm key={profile.id} profile={profile} text={text} />
             <Preferences language={language} text={text} />
+            {workspace && (
+              <Button asChild variant="outline" className="justify-self-start">
+                <Link href={"/workspaces/" + encodeURIComponent(workspace.slug) + "/projects"}>{workspace.name}</Link>
+              </Button>
+            )}
+            {workspaces.isSuccess && !workspace && (
+              <Button asChild variant="outline" className="justify-self-start">
+                <Link href="/workspaces/new">{text.createWorkspace}</Link>
+              </Button>
+            )}
+            {workspaces.error && <p role="alert" className="text-sm text-destructive">{errorText(workspaces.error)}</p>}
             <Button type="button" variant="outline" className="justify-self-start"
               disabled={logout.isPending || logout.isSuccess} onClick={() => logout.mutate()}>{text.logOut}</Button>
             {logout.error && <p role="alert" className="text-sm text-destructive">{errorText(logout.error)}</p>}

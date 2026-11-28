@@ -43,7 +43,7 @@ type Issue = {
 type Author = { display_name: string; avatar_url: string | null };
 type Comment = { id: string; author_id: string; body: string; created_at: string; deleted_at: string | null; author?: Author | null };
 type Member = { user_id: string; user: Author & { id: string } };
-type IssueLabel = { id: string; name: string };
+type IssueLabel = { id: string; name: string; color: string };
 type Attachment = { id: string; file_name: string; file_size: number; download_url: string };
 type AttachmentUpload = { attachment: Attachment; upload: { url: string; headers: Record<string, string> } };
 type Activity = { id: string; action: string; field: string | null; created_at: string; actor?: Author | null };
@@ -138,7 +138,7 @@ export default function TaskDetailPage() {
     enabled: issue.isSuccess && activityTab === "activity",
   });
   const account = useQuery({
-    queryKey: ["current-account"],
+    queryKey: ["me"],
     queryFn: async function getMe({ signal }) {
       return (await api.get<{ id: string }>("/auth/me", { signal })).data;
     },
@@ -166,10 +166,6 @@ export default function TaskDetailPage() {
     enabled: issue.isSuccess,
   });
 
-  function refreshComments() {
-    return queryClient.invalidateQueries({ queryKey: commentsKey });
-  }
-
   function refreshIssue() {
     return Promise.all([
       queryClient.invalidateQueries({ queryKey: issueListKey }),
@@ -196,7 +192,7 @@ export default function TaskDetailPage() {
   const postComment = useMutation({
     mutationFn: (values: z.infer<typeof commentSchema>) => api.post(issuePath + "/comments", values),
     onSuccess: async () => {
-      await refreshComments();
+      await refreshIssue();
       commentForm.reset();
     },
   });
@@ -204,14 +200,14 @@ export default function TaskDetailPage() {
     mutationFn: ({ id, body }: { id: string; body: string }) =>
       api.patch(issuePath + "/comments/" + encodeURIComponent(id), { body }),
     onSuccess: async () => {
-      await refreshComments();
+      await refreshIssue();
       commentForm.reset();
       setEditingCommentId(null);
     },
   });
   const deleteComment = useMutation({
     mutationFn: (id: string) => api.delete(issuePath + "/comments/" + encodeURIComponent(id)),
-    onSuccess: refreshComments,
+    onSuccess: refreshIssue,
   });
   const postAssignee = useMutation({
     mutationFn: (user_id: string) => api.post(issuePath + "/assignees", { user_id }),
@@ -255,7 +251,10 @@ export default function TaskDetailPage() {
   const t = translations[language];
   const task = issue.data;
   const taskAssignees = (task?.assignees ?? []).flatMap((el) => el.user?.id ? [el.user] : []);
-  const taskLabels = (task?.labels ?? []).flatMap((el) => el.label?.id ? [el.label] : []);
+  const taskLabels = (task?.labels ?? []).flatMap((el) => {
+    const label = el.label;
+    return label?.id ? [labels.data?.find((item) => item.id === label.id) ?? label] : [];
+  });
   const availableMembers = members.data?.filter((el) => !taskAssignees.some((user) => user.id === el.user_id));
   const availableLabels = labels.data?.filter((el) => !taskLabels.some((label) => label.id === el.id));
   const visibleComments = comments.data?.filter((el) => !el.deleted_at) ?? [];
@@ -476,7 +475,10 @@ export default function TaskDetailPage() {
                   <div className="grid gap-[4px] py-[6px]">
                     {taskLabels.map((el) => (
                       <div key={el.id} className="flex items-center justify-between gap-[4px]">
-                        <span>{el.name}</span>
+                        <span className="flex items-center gap-[4px]">
+                          <span aria-hidden="true" className="size-[8px] shrink-0 rounded-full" style={{ backgroundColor: el.color }} />
+                          {el.name}
+                        </span>
                         <Button type="button" variant="ghost" size="icon-sm" aria-label={t.remove + " " + el.name}
                           disabled={deleteLabel.isPending || postLabel.isPending} onClick={() => deleteLabel.mutate(el.id)}><X /></Button>
                       </div>
@@ -485,7 +487,14 @@ export default function TaskDetailPage() {
                       <Select value="" disabled={postLabel.isPending || deleteLabel.isPending} onValueChange={(value) => postLabel.mutate(value)}>
                         <SelectTrigger><SelectValue placeholder={t.addLabel} /></SelectTrigger>
                         <SelectContent>
-                          {availableLabels.map((el) => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
+                          {availableLabels.map((el) => (
+                            <SelectItem key={el.id} value={el.id}>
+                              <span className="flex items-center gap-[6px]">
+                                <span aria-hidden="true" className="size-[8px] rounded-full" style={{ backgroundColor: el.color }} />
+                                {el.name}
+                              </span>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}

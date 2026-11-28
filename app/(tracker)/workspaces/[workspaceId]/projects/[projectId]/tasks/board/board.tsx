@@ -37,12 +37,13 @@ function TaskCard({ task, href, saving, showDates }: { task: Task; href: string;
   );
 }
 
-function BoardColumn({ id, name, count, children }: { id: string; name: string; count: number; children: ReactNode }) {
+function BoardColumn({ id, name, color, count, children }: { id: string; name: string; color?: string; count: number; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <section ref={setNodeRef} aria-label={name} className={"flex min-h-[420px] w-[226px] shrink-0 flex-col gap-[8px] rounded-[8px] bg-muted p-[8px]" + (isOver ? " ring-2 ring-primary" : "")}>
       <div className="flex items-center gap-[8px] px-[4px] py-[4px] text-[13px] font-semibold">
+        {color && <span aria-hidden="true" className="size-[8px] rounded-full" style={{ backgroundColor: color }} />}
         <h2>{name}</h2>
         <Badge variant="outline">{count}</Badge>
       </div>
@@ -62,7 +63,7 @@ export default function BoardPage() {
       {({ tasks, states, editIssue, saving, showDates, taskPath }) => {
         const otherTasks = tasks.filter((el) => !states.some((state) => state.id === el.state_id));
         const columns = otherTasks.length
-          ? [...states, { id: "no-status", name: "No status" }]
+          ? [...states, { id: "no-status", name: "No status", color: undefined }]
           : states;
 
         return (
@@ -75,7 +76,7 @@ export default function BoardPage() {
               {columns.map((el) => {
                 const columnTasks = el.id === "no-status" ? otherTasks : tasks.filter((task) => task.state_id === el.id);
                 return (
-                  <BoardColumn key={el.id} id={el.id} name={el.name} count={columnTasks.length}>
+                  <BoardColumn key={el.id} id={el.id} name={el.name} color={el.color} count={columnTasks.length}>
                     {columnTasks.map((el) => (
                       <TaskCard key={el.id} task={el} href={taskPath + "/" + encodeURIComponent(el.id)} saving={saving} showDates={showDates} />
                     ))}

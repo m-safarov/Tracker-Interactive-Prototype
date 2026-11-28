@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import type { ComponentProps } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TaskListPage from "../task-list";
@@ -25,14 +26,21 @@ function dayKey(date: Date) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }
 
-function renderTask(task: Task, { taskPath, editIssue, saving }: ViewData) {
+function renderTask(task: Task, { taskPath, states, editIssue, saving }: ViewData) {
   const date = task.due_date ? new Date(task.due_date) : null;
+  const status = states.find((el) => el.id === task.state_id);
 
   return (
     <div key={task.id} className="my-[4px] flex flex-col gap-[4px] rounded-[5px] bg-primary/10 p-[6px]">
       <Link href={taskPath + "/" + encodeURIComponent(task.id)} className="block break-words font-medium hover:underline">
         {task.taskKey} {task.title}
       </Link>
+      {status && (
+        <Badge variant="outline" className="self-start">
+          <span aria-hidden="true" className="size-[8px] rounded-full" style={{ backgroundColor: status.color }} />
+          {status.name}
+        </Badge>
+      )}
       {date && (
         <time dateTime={dayKey(date)} className="text-muted-foreground">
           {date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}

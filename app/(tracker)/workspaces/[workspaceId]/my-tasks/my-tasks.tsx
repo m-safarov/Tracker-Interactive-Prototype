@@ -116,7 +116,7 @@ export default function MyTasksPage() {
   const filter = view === "created" ? "created_by" : "assignee";
   const needsWorkspace = !workspaceId || workspaceId === "undefined";
   const workspaces = useQuery({
-    queryKey: ["workspaces", "my-tasks"],
+    queryKey: ["workspaces"],
     queryFn: async ({ signal }) => {
       const { data } = await api.get<Workspace[]>("/workspaces", { signal });
       return readList(data, "workspaces");
@@ -137,7 +137,7 @@ export default function MyTasksPage() {
   }, [fallbackPath, router]);
 
   const account = useQuery({
-    queryKey: ["current-account"],
+    queryKey: ["me"],
     queryFn: async function getMe({ signal }) {
       const { data } = await api.get<{ id: string }>("/auth/me", { signal });
       return data;
