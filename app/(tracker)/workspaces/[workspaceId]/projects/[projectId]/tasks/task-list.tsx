@@ -81,7 +81,6 @@ const projectFormSchema = z.object({
   name: z.string().trim().min(1, "Номи проектро нависед.").max(100, "Ном то 100 аломат бошад."),
   identifier: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{1,10}$/, "Аз 1 то 10 ҳарфи лотинӣ ё рақам нависед."),
 });
-const proxyOptions = { baseURL: "/api" };
 
 async function getIssues(path: string, filters: Record<string, string | undefined>, signal: AbortSignal) {
   const issues: Issue[] = [];
@@ -89,7 +88,6 @@ async function getIssues(path: string, filters: Record<string, string | undefine
 
   do {
     const { data }: { data: IssuePage } = await api.get<IssuePage>(path + "/issues", {
-      ...proxyOptions,
       signal,
       params: { ...filters, limit: 100, cursor },
     });
@@ -145,12 +143,12 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
 
   const workspace = useQuery({
     queryKey: ["workspace", workspaceId],
-    queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { ...proxyOptions, signal })).data,
+    queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { signal })).data,
   });
   const projects = useQuery({
     queryKey: projectsKey,
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<Project[]>(projectsPath, { ...proxyOptions, signal });
+      const { data } = await api.get<Project[]>(projectsPath, { signal });
       if (!Array.isArray(data)) throw new Error("Could not read the workspace projects.");
       return data;
     },
@@ -158,13 +156,13 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   });
   const project = useQuery({
     queryKey: ["project", workspaceId, projectId],
-    queryFn: async ({ signal }) => (await api.get<Project>(path, { ...proxyOptions, signal })).data,
+    queryFn: async ({ signal }) => (await api.get<Project>(path, { signal })).data,
     enabled: hasProjectId,
   });
   const states = useQuery({
     queryKey: ["states", workspaceId, projectId],
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<ProjectState[]>(path + "/states", { ...proxyOptions, signal });
+      const { data } = await api.get<ProjectState[]>(path + "/states", { signal });
       if (!Array.isArray(data)) throw new Error("Could not read the project statuses.");
       return data;
     },
@@ -191,7 +189,7 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   });
   const postProject = useMutation({
     mutationFn: async (values: z.infer<typeof projectFormSchema>) => {
-      const { data } = await api.post<Project>(projectsPath, values, proxyOptions);
+      const { data } = await api.post<Project>(projectsPath, values);
       return data;
     },
     onSuccess: (createdProject) => {
@@ -201,7 +199,7 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
   });
   const editIssue = useMutation({
     mutationFn: ({ id, changes }: { id: string; changes: IssueChanges }) =>
-      api.patch<Issue>(path + "/issues/" + encodeURIComponent(id), changes, proxyOptions),
+      api.patch<Issue>(path + "/issues/" + encodeURIComponent(id), changes),
     onSuccess: async (_, { id }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: issueKey }),

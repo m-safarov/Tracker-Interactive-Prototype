@@ -44,7 +44,6 @@ type Task = Issue & { taskKey: string; project: Project; states: ProjectState[];
 type TaskGroup = { key: string; state?: ProjectState; tasks: Task[] };
 type TaskFilter = "assignee" | "created_by";
 
-const proxyOptions = { baseURL: "/api" };
 
 const stateIcons = {
   backlog: CircleDashed,
@@ -72,7 +71,6 @@ async function getIssues(projectPath: string, userId: string, filter: TaskFilter
 
   do {
     const { data }: { data: IssuePage } = await api.get<IssuePage>(`${projectPath}/issues`, {
-      ...proxyOptions,
       params: { [filter]: userId, limit: 100, cursor },
       signal,
     });
@@ -85,7 +83,7 @@ async function getIssues(projectPath: string, userId: string, filter: TaskFilter
 }
 
 async function getStates(projectPath: string, signal: AbortSignal) {
-  const { data } = await api.get<ProjectState[]>(`${projectPath}/states`, { ...proxyOptions, signal });
+  const { data } = await api.get<ProjectState[]>(`${projectPath}/states`, { signal });
   return readList(data, "statuses");
 }
 
@@ -117,7 +115,7 @@ export default function MyTasksPage() {
   const workspaces = useQuery({
     queryKey: ["workspaces", "my-tasks"],
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<Workspace[]>("/workspaces", { ...proxyOptions, signal });
+      const { data } = await api.get<Workspace[]>("/workspaces", { signal });
       return readList(data, "workspaces");
     },
     enabled: needsWorkspace,
@@ -138,7 +136,7 @@ export default function MyTasksPage() {
   const account = useQuery({
     queryKey: ["current-account"],
     queryFn: async function getMe({ signal }) {
-      const { data } = await api.get<{ id: string }>("/auth/me", { ...proxyOptions, signal });
+      const { data } = await api.get<{ id: string }>("/auth/me", { signal });
       return data;
     },
     enabled: hasWorkspace,
@@ -147,14 +145,14 @@ export default function MyTasksPage() {
   });
   const workspace = useQuery({
     queryKey: ["workspace", workspaceId],
-    queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { ...proxyOptions, signal })).data,
+    queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { signal })).data,
     enabled: hasWorkspace,
     retry: false,
   });
   const projects = useQuery({
     queryKey: ["projects", workspaceId],
     queryFn: async function getProjects({ signal }) {
-      const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { ...proxyOptions, signal });
+      const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { signal });
       return readList(data, "projects");
     },
     select: (data) => readList(data, "projects"),
@@ -181,7 +179,7 @@ export default function MyTasksPage() {
   });
   const editIssue = useMutation({
     mutationFn: ({ id, projectId, stateId }: { id: string; projectId: string; stateId: string }) =>
-      api.patch(`${workspacePath}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(id)}`, { state_id: stateId }, proxyOptions),
+      api.patch(`${workspacePath}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(id)}`, { state_id: stateId }),
     onSuccess: (_, { id, projectId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["issues", workspaceId, projectId] }),
       queryClient.invalidateQueries({ queryKey: ["issue", workspaceId, projectId, id] }),

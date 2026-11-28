@@ -49,7 +49,6 @@ type AttachmentUpload = { attachment: Attachment; upload: { url: string; headers
 type Activity = { id: string; action: string; field: string | null; created_at: string; actor?: Author | null };
 type ActivityPage = { data: Activity[]; next_cursor: string | null };
 
-const proxyOptions = { baseURL: "/api" };
 const formSchema = z.object({
   title: z.string().trim().min(1, "Номи вазифаро нависед.").max(500, "Ном то 500 аломат бошад."),
   description: z.string().trim().max(50_000, "Тавсиф то 50 000 аломат бошад."),
@@ -60,7 +59,7 @@ const commentSchema = z.object({
 const attachmentSchema = z.file().min(1, "Файли холиро замима кардан мумкин нест.");
 
 async function getIssue(path: string, signal: AbortSignal) {
-  const { data } = await api.get<Issue>(path, { ...proxyOptions, signal });
+  const { data } = await api.get<Issue>(path, { signal });
   return data;
 }
 
@@ -69,7 +68,7 @@ async function getActivity(path: string, signal: AbortSignal) {
   let cursor: string | null = null;
   do {
     const { data }: { data: ActivityPage } = await api.get<ActivityPage>(path + "/activity", {
-      ...proxyOptions, signal, params: { cursor },
+      signal, params: { cursor },
     });
     if (!Array.isArray(data?.data) || (data.next_cursor && data.next_cursor === cursor)) throw new Error("Could not read task activity.");
     events.push(...data.data);
@@ -118,16 +117,16 @@ export default function TaskDetailPage() {
   });
   const project = useQuery({
     queryKey: ["project", workspaceId, projectId],
-    queryFn: async ({ signal }) => (await api.get<{ name: string; identifier: string }>(path, { ...proxyOptions, signal })).data,
+    queryFn: async ({ signal }) => (await api.get<{ name: string; identifier: string }>(path, { signal })).data,
   });
   const states = useQuery({
     queryKey: ["states", workspaceId, projectId],
-    queryFn: async ({ signal }) => (await api.get<{ id: string; name: string }[]>(path + "/states", { ...proxyOptions, signal })).data,
+    queryFn: async ({ signal }) => (await api.get<{ id: string; name: string }[]>(path + "/states", { signal })).data,
   });
   const comments = useQuery({
     queryKey: commentsKey,
     queryFn: async function getComments({ signal }) {
-      const { data } = await api.get<Comment[]>(issuePath + "/comments", { ...proxyOptions, signal });
+      const { data } = await api.get<Comment[]>(issuePath + "/comments", { signal });
       if (!Array.isArray(data)) throw new Error("Could not read task comments.");
       return data;
     },
@@ -180,7 +179,7 @@ export default function TaskDetailPage() {
 
   const editIssue = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) =>
-      (await api.patch<Issue>(issuePath, { title: values.title, description: values.description || null }, proxyOptions)).data,
+      (await api.patch<Issue>(issuePath, { title: values.title, description: values.description || null })).data,
     onSuccess: async (data) => {
       queryClient.setQueryData(issueKey, data);
       await refreshIssue();
@@ -188,7 +187,7 @@ export default function TaskDetailPage() {
     },
   });
   const deleteIssue = useMutation({
-    mutationFn: () => api.delete(issuePath, proxyOptions),
+    mutationFn: () => api.delete(issuePath),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: issueListKey });
       router.replace(taskPath, { scroll: false });

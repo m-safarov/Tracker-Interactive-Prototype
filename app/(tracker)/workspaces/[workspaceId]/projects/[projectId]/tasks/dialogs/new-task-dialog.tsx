@@ -28,7 +28,6 @@ const formSchema = z.object({
   label_ids: z.array(z.string()),
 });
 const projectIdSchema = z.uuid();
-const proxyOptions = { baseURL: "/api" };
 
 type Project = { id: string; name: string; identifier: string; is_archived: boolean };
 type ProjectStatus = { id: string; name: string; is_default: boolean };
@@ -36,13 +35,13 @@ type ProjectLabel = { id: string; name: string };
 type ProjectMember = { user_id: string; user: { display_name: string } };
 
 async function getProjects(workspacePath: string, signal: AbortSignal) {
-  const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { ...proxyOptions, signal });
+  const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { signal });
   if (!Array.isArray(data)) throw new Error(messages.optionsError);
   return data;
 }
 
 async function getStates(projectPath: string, signal: AbortSignal) {
-  const { data } = await api.get<ProjectStatus[]>(`${projectPath}/states`, { ...proxyOptions, signal });
+  const { data } = await api.get<ProjectStatus[]>(`${projectPath}/states`, { signal });
   if (!Array.isArray(data)) throw new Error(messages.optionsError);
   return data;
 }
@@ -98,7 +97,7 @@ export default function NewTaskDialog() {
   const labels = useQuery({
     queryKey: ["labels", workspaceId, project],
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<ProjectLabel[]>(projectPath + "/labels", { ...proxyOptions, signal });
+      const { data } = await api.get<ProjectLabel[]>(projectPath + "/labels", { signal });
       if (!Array.isArray(data)) throw new Error(messages.optionsError);
       return data;
     },
@@ -108,7 +107,7 @@ export default function NewTaskDialog() {
   const members = useQuery({
     queryKey: ["project-members", workspaceId, project],
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<ProjectMember[]>(projectPath + "/members", { ...proxyOptions, signal });
+      const { data } = await api.get<ProjectMember[]>(projectPath + "/members", { signal });
       if (!Array.isArray(data)) throw new Error(messages.optionsError);
       return data;
     },
@@ -117,7 +116,7 @@ export default function NewTaskDialog() {
   });
   const postIssue = useMutation({
     mutationFn: async (values: { title: string; state_id: string; assignee_ids: string[]; label_ids: string[] }) => {
-      const { data } = await api.post<{ title: string }>(`${projectPath}/issues`, values, proxyOptions);
+      const { data } = await api.post<{ title: string }>(`${projectPath}/issues`, values);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["issues", workspaceId, project] }),
