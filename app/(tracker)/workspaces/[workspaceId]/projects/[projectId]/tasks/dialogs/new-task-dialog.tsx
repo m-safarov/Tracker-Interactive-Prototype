@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,19 +24,26 @@ const formSchema = z.object({
   title: z.string().trim().min(1, messages.titleRequired).max(500, messages.titleTooLong),
   project: z.string(),
   status: z.string(),
+  assignee_ids: z.array(z.string()),
+  label_ids: z.array(z.string()),
 });
 const projectIdSchema = z.uuid();
+const proxyOptions = { baseURL: "/api" };
 
 type Project = { id: string; name: string; identifier: string; is_archived: boolean };
 type ProjectStatus = { id: string; name: string; is_default: boolean };
+type ProjectLabel = { id: string; name: string };
+type ProjectMember = { user_id: string; user: { display_name: string } };
 
 async function getProjects(workspacePath: string, signal: AbortSignal) {
-  const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { signal });
+  const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { ...proxyOptions, signal });
+  if (!Array.isArray(data)) throw new Error(messages.optionsError);
   return data;
 }
 
 async function getStates(projectPath: string, signal: AbortSignal) {
-  const { data } = await api.get<ProjectStatus[]>(`${projectPath}/states`, { signal });
+  const { data } = await api.get<ProjectStatus[]>(`${projectPath}/states`, { ...proxyOptions, signal });
+  if (!Array.isArray(data)) throw new Error(messages.optionsError);
   return data;
 }
 
@@ -48,22 +56,29 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function NewTaskDialog() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedStatus = searchParams.get("newTaskState");
   const workspacePath = `/workspaces/${encodeURIComponent(workspaceId)}`;
   const routeProject = projectIdSchema.safeParse(projectId).data;
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const isOpen = open || !!requestedStatus;
   const { register, control, handleSubmit, reset, setValue, formState } = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: { title: "", project: "", status: "" },
+    defaultValues: { title: "", project: "", status: "", assignee_ids: [], label_ids: [] },
   });
   const selectedProject = useWatch({ control, name: "project" });
   const selectedStatus = useWatch({ control, name: "status" });
+  const assigneeIds = useWatch({ control, name: "assignee_ids" });
+  const labelIds = useWatch({ control, name: "label_ids" });
 
   const projects = useQuery({
     queryKey: ["projects", workspaceId],
     queryFn: ({ signal }) => getProjects(workspacePath, signal),
     select: (data) => data.filter((el) => !el.is_archived),
-    enabled: open && !routeProject,
+    enabled: isOpen && !routeProject,
     retry: false,
   });
   const projectOptions = projects.data ?? [];
@@ -73,24 +88,47 @@ export default function NewTaskDialog() {
   const statuses = useQuery({
     queryKey: ["states", workspaceId, project],
     queryFn: ({ signal }) => getStates(projectPath, signal),
-    enabled: open && !!project,
+    enabled: isOpen && !!project,
+    retry: false,
+  });
+  const labels = useQuery({
+    queryKey: ["labels", workspaceId, project],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<ProjectLabel[]>(projectPath + "/labels", { ...proxyOptions, signal });
+      if (!Array.isArray(data)) throw new Error(messages.optionsError);
+      return data;
+    },
+    enabled: isOpen && !!project,
+    retry: false,
+  });
+  const members = useQuery({
+    queryKey: ["project-members", workspaceId, project],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<ProjectMember[]>(projectPath + "/members", { ...proxyOptions, signal });
+      if (!Array.isArray(data)) throw new Error(messages.optionsError);
+      return data;
+    },
+    enabled: isOpen && !!project,
     retry: false,
   });
   const postIssue = useMutation({
-    mutationFn: async (values: { title: string; state_id: string }) => {
-      const { data } = await api.post<{ title: string }>(`${projectPath}/issues`, values);
+    mutationFn: async (values: { title: string; state_id: string; assignee_ids: string[]; label_ids: string[] }) => {
+      const { data } = await api.post<{ title: string }>(`${projectPath}/issues`, values, proxyOptions);
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["issues", workspaceId, project] }),
   });
 
-  const statusOptions = statuses.data ?? [];
+  const statusOptions = Array.isArray(statuses.data) ? statuses.data : [];
+  const labelOptions = Array.isArray(labels.data) ? labels.data : [];
+  const memberOptions = Array.isArray(members.data) ? members.data : [];
   const defaultStatus = statusOptions.find((status) => status.is_default) ?? statusOptions[0];
-  const status = statusOptions.find((item) => item.id === selectedStatus) ?? defaultStatus;
+  const status = statusOptions.find((el) => el.id === (selectedStatus || requestedStatus)) ?? defaultStatus;
   const saving = formState.isSubmitting || postIssue.isPending;
-  const loading = (!routeProject && projects.isPending) || (!!project && statuses.isPending);
-  const projectError = routeProject ? null : projects.error;
-  const optionError = projectError ?? statuses.error;
+  const optionQueries = routeProject ? [statuses, labels, members] : [projects, statuses, labels, members];
+  const failedQueries = optionQueries.filter((el) => el.isError);
+  const loading = (!routeProject && projects.isPending) || (!!project && (statuses.isPending || labels.isPending || members.isPending));
+  const optionError = failedQueries[0]?.error;
   const field = "flex flex-col gap-[6px]";
   const errorClass = "text-[13px] text-destructive";
   const titleError = formState.errors.title;
@@ -101,26 +139,37 @@ export default function NewTaskDialog() {
     if (!nextOpen) {
       reset();
       postIssue.reset();
+      if (requestedStatus) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("newTaskState");
+        router.replace(pathname + (next.size ? "?" + next.toString() : ""), { scroll: false });
+      }
     }
   }
 
   function changeProject(value: string) {
     setValue("project", value);
     setValue("status", "");
+    setValue("assignee_ids", []);
+    setValue("label_ids", []);
     postIssue.reset();
   }
 
-  async function submit({ title }: z.infer<typeof formSchema>) {
+  function toggleOption(field: "assignee_ids" | "label_ids", values: string[], id: string, checked: boolean) {
+    setValue(field, checked ? [...values, id] : values.filter((el) => el !== id));
+  }
+
+  async function submit({ title, assignee_ids, label_ids }: z.infer<typeof formSchema>) {
     if (!status || optionError || postIssue.isPending || postIssue.isSuccess) return;
-    await postIssue.mutateAsync({ title, state_id: status.id }).catch(() => undefined);
+    await postIssue.mutateAsync({ title, state_id: status.id, assignee_ids, label_ids }).catch(() => undefined);
   }
 
   return (
-    <Dialog open={open} onOpenChange={changeOpen}>
+    <Dialog open={isOpen} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
         <Button type="button" size="sm" className="w-[120px]"><Plus />{copy.newTask}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-32px)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{copy.newTask}</DialogTitle>
           <DialogDescription>{postIssue.isSuccess ? postIssue.data.title : copy.introduction}</DialogDescription>
@@ -174,6 +223,36 @@ export default function NewTaskDialog() {
               </Select>
               {project && statuses.isSuccess && !statusOptions.length && <p role="status">{copy.noStatuses}</p>}
             </div>
+            {project && !loading && !optionError && (
+              <div className="grid grid-cols-2 gap-[8px]">
+                <fieldset disabled={saving} className="min-w-0 rounded-[6px] border border-border p-[8px]">
+                  <legend className="px-[4px] text-[13px]">{translations.en.assignees}</legend>
+                  <div className="flex max-h-[120px] flex-col gap-[8px] overflow-y-auto">
+                    {memberOptions.length === 0 && <p className="text-muted-foreground">—</p>}
+                    {memberOptions.map((el) => (
+                      <div key={el.user_id} className="flex items-center gap-[6px]">
+                        <Checkbox id={"new-task-member-" + el.user_id} checked={assigneeIds.includes(el.user_id)}
+                          onCheckedChange={(checked) => toggleOption("assignee_ids", assigneeIds, el.user_id, checked)} />
+                        <Label htmlFor={"new-task-member-" + el.user_id}>{el.user?.display_name || "—"}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset disabled={saving} className="min-w-0 rounded-[6px] border border-border p-[8px]">
+                  <legend className="px-[4px] text-[13px]">{translations.en.labels}</legend>
+                  <div className="flex max-h-[120px] flex-col gap-[8px] overflow-y-auto">
+                    {labelOptions.length === 0 && <p className="text-muted-foreground">—</p>}
+                    {labelOptions.map((el) => (
+                      <div key={el.id} className="flex items-center gap-[6px]">
+                        <Checkbox id={"new-task-label-" + el.id} checked={labelIds.includes(el.id)}
+                          onCheckedChange={(checked) => toggleOption("label_ids", labelIds, el.id, checked)} />
+                        <Label htmlFor={"new-task-label-" + el.id}>{el.name}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            )}
             {loading && <p role="status" className="text-[13px] text-muted-foreground">{copy.loading}</p>}
             {optionError && (
               <div className={field}>
@@ -183,8 +262,8 @@ export default function NewTaskDialog() {
                   variant="outline"
                   size="sm"
                   className="self-start"
-                  onClick={() => projectError ? projects.refetch() : statuses.refetch()}
-                  disabled={projects.isFetching || statuses.isFetching}
+                  onClick={() => failedQueries.forEach((el) => void el.refetch())}
+                  disabled={failedQueries.some((el) => el.isFetching)}
                 >
                   {copy.retry}
                 </Button>
@@ -195,7 +274,7 @@ export default function NewTaskDialog() {
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="sm" disabled={saving}>{copy.cancel}</Button>
               </DialogClose>
-              <Button type="submit" size="sm" disabled={saving || !status || !!optionError}>
+              <Button type="submit" size="sm" disabled={saving || loading || !status || !!optionError}>
                 {saving ? copy.creating : copy.create}
               </Button>
             </DialogFooter>
