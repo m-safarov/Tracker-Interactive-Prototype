@@ -58,13 +58,14 @@ export default function NewTaskDialog() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const requestedTask = searchParams.get("newTask") === "1";
   const requestedStatus = searchParams.get("newTaskState");
   const workspacePath = `/workspaces/${encodeURIComponent(workspaceId)}`;
   const routeProject = projectIdSchema.safeParse(projectId).data;
   const queryClient = useQueryClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const isOpen = open || !!requestedStatus;
+  const isOpen = open || requestedTask || !!requestedStatus;
   const { register, control, handleSubmit, reset, setValue, formState } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: { title: "", project: "", status: "", assignee_ids: [], label_ids: [] },
@@ -139,8 +140,9 @@ export default function NewTaskDialog() {
     if (!nextOpen) {
       reset();
       postIssue.reset();
-      if (requestedStatus) {
+      if (requestedTask || requestedStatus) {
         const next = new URLSearchParams(searchParams);
+        next.delete("newTask");
         next.delete("newTaskState");
         router.replace(pathname + (next.size ? "?" + next.toString() : ""), { scroll: false });
       }

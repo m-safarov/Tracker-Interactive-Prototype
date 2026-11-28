@@ -100,6 +100,7 @@ export default function ProfilePage() {
       }
 
       queryClient.setQueryData(profileKey, { ...updatedProfile, savedPhoto: loadSavedPhoto(updatedProfile.id) });
+      queryClient.setQueryData(["current-account"], updatedProfile);
       return queryClient.invalidateQueries({ queryKey: profileKey });
     },
   });
