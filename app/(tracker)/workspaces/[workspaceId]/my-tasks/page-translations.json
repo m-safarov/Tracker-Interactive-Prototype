@@ -2,6 +2,10 @@
   "en": {
     "team": "Demo Team",
     "myTasks": "My tasks",
+    "loading": "Loading tasks…",
+    "empty": "No tasks are assigned to you.",
+    "retry": "Try again",
+    "signIn": "Sign in",
     "assignedToMe": "Assigned to me",
     "createdByMe": "Created by me",
     "title": "Title",
@@ -22,6 +26,10 @@
   "tg": {
     "team": "Гурӯҳи намунавӣ",
     "myTasks": "Вазифаҳои ман",
+    "loading": "Вазифаҳо бор шуда истодаанд…",
+    "empty": "Ба шумо ҳоло вазифае таъин нашудааст.",
+    "retry": "Дубора санҷидан",
+    "signIn": "Ворид шудан",
     "assignedToMe": "Ба ман таъиншуда",
     "createdByMe": "Сохтаи ман",
     "title": "Унвон",
@@ -42,6 +50,10 @@
   "ru": {
     "team": "Демо-команда",
     "myTasks": "Мои задачи",
+    "loading": "Загрузка задач…",
+    "empty": "Вам пока не назначены задачи.",
+    "retry": "Повторить",
+    "signIn": "Войти",
     "assignedToMe": "Назначенные мне",
     "createdByMe": "Созданные мной",
     "title": "Название",

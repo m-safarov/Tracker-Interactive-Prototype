@@ -1,5 +1,29 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "projects": "Projects",
+    "active": "Active",
+    "archived": "Archived",
+    "project": "Project",
+    "lead": "Lead",
+    "created": "Created",
+    "restore": "Restore"
+  },
+  "tg": {
+    "projects": "Проектҳо",
+    "active": "Фаъол",
+    "archived": "Архив",
+    "project": "Проект",
+    "lead": "Роҳбар",
+    "created": "Сохта шуд",
+    "restore": "Барқарор кардан"
+  },
+  "ru": {
+    "projects": "Проекты",
+    "active": "Активные",
+    "archived": "Архив",
+    "project": "Проект",
+    "lead": "Лидер",
+    "created": "Создан",
+    "restore": "Восстановить"
+  }
 }

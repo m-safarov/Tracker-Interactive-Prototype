@@ -1,5 +1,35 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "settings": "Settings",
+    "title": "Workspace settings",
+    "general": "General",
+    "members": "Members",
+    "name": "Name",
+    "address": "Address",
+    "save": "Save changes",
+    "transfer": "Transfer ownership",
+    "delete": "Delete workspace"
+  },
+  "tg": {
+    "settings": "Танзимот",
+    "title": "Танзимоти workspace",
+    "general": "Умумӣ",
+    "members": "Аъзо",
+    "name": "Ном",
+    "address": "Суроға",
+    "save": "Захира кардан",
+    "transfer": "Додани соҳибӣ",
+    "delete": "Нест кардани workspace"
+  },
+  "ru": {
+    "settings": "Настройки",
+    "title": "Настройки workspace",
+    "general": "Общие",
+    "members": "Участники",
+    "name": "Название",
+    "address": "Адрес",
+    "save": "Сохранить",
+    "transfer": "Передать владение",
+    "delete": "Удалить workspace"
+  }
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, Columns3, List, ListFilter, Search, SlidersHorizontal, TableProperties } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,26 +14,82 @@ import WorkspaceSidebar from "@/components/workspace-sidebar";
 import NewTaskDialog from "../dialogs/new-task-dialog";
 import translations from "./page-translations.json";
 
+const t = translations.en;
+const demoMonth = new Date(2026, 10, 1);
+
+// Намуна: вазифаҳои моҳи ноябри 2026 то пайваст шудани API.
+const demoTasks: Record<number, { key: string; title: string; detailId?: string } | undefined> = {
+  24: { key: "WEB-1", title: t.checkoutShort, detailId: "web-1" },
+  25: { key: "WEB-19", title: t.documentLabels },
+  27: { key: "WEB-5", title: t.billing },
+  29: { key: "WEB-12", title: t.expired },
+};
+
+function getCalendarDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1);
+  const daysBeforeMonth = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const weeks = Math.ceil((daysBeforeMonth + daysInMonth) / 7);
+
+  return Array.from({ length: weeks * 7 }, (_, index) =>
+    new Date(year, month, index - daysBeforeMonth + 1),
+  );
+}
+
 export default function CalendarPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const path = `/workspaces/${workspaceId}/projects/${projectId}`;
-  const t = translations.en;
+  const [today, setToday] = useState<Date | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    // Санаи маҳаллиро аз браузер мегирем, чун минтақаи вақти сервер метавонад дигар бошад.
+    const frame = requestAnimationFrame(() => setToday(new Date()));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const visibleMonth = selectedMonth ?? today ?? demoMonth;
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const days = getCalendarDays(year, month);
+  const monthTitle = visibleMonth.toLocaleDateString("en", { month: "long", year: "numeric" });
+  const searchText = search.trim().toLowerCase();
   const viewTab = "flex h-[30px] items-center gap-[6px] rounded-[5px] border-b-0 px-[10px] pb-[0px] text-[12px] data-[state=active]:bg-primary/10 data-[state=active]:text-primary";
   const grid = "grid grid-cols-[repeat(7,minmax(0,1fr))]";
   const weekday = "px-[10px] text-[12px] text-muted-foreground";
   const cell = "min-h-[117px] min-w-0 border-r border-b border-border p-[9px] text-[12px]";
 
-  function dayCell(date: number, children?: ReactNode, previous = false, highlighted = false) {
+  function moveMonth(direction: -1 | 1) {
+    setSelectedMonth((current) => {
+      const date = current ?? visibleMonth;
+      return new Date(date.getFullYear(), date.getMonth() + direction, 1);
+    });
+  }
+
+  function goToToday() {
+    setToday(new Date());
+    setSelectedMonth(null);
+  }
+
+  function renderDay(day: Date) {
+    const date = day.getDate();
+    const isToday = day.toDateString() === today?.toDateString();
+    const outsideMonth = day.getMonth() !== month;
+    const isDemoMonth = day.getFullYear() === demoMonth.getFullYear() && day.getMonth() === demoMonth.getMonth();
+    const task = isDemoMonth ? demoTasks[date] : undefined;
+    const showTask = task && `${task.key} ${task.title}`.toLowerCase().includes(searchText);
+
     return (
-      <div className={`${cell} ${highlighted ? "bg-primary/10 font-semibold" : ""}`}>
-        <span className={previous ? "text-muted-foreground" : ""}>{date}</span>
-        {children}
+      <div key={day.toDateString()} className={`${cell} ${isToday ? "bg-primary/10 font-semibold" : ""}`}>
+        <span className={outsideMonth ? "text-muted-foreground" : ""} aria-current={isToday ? "date" : undefined}>{date}</span>
+        {showTask && renderTask(task.key, task.title, task.detailId)}
       </div>
     );
   }
 
-  function task(taskKey: string, name: string) {
-    return (
+  function renderTask(taskKey: string, name: string, detailId?: string) {
+    const card = (
       <div className="mt-[6px] [&>div]:bg-muted">
         <Card className="min-h-[43px] gap-[1px] px-[6px] py-[4px]">
           <span className="text-[11px] leading-[13px] text-muted-foreground">{taskKey}</span>
@@ -41,6 +97,9 @@ export default function CalendarPage() {
         </Card>
       </div>
     );
+    return detailId
+      ? <Link href={`${path}/tasks/${detailId}`} className="block hover:underline">{card}</Link>
+      : card;
   }
 
   return (
@@ -69,7 +128,14 @@ export default function CalendarPage() {
             <div className="relative">
               <Label htmlFor="task-search" className="sr-only">{t.search}</Label>
               <Search className="pointer-events-none absolute top-[8px] left-[9px] size-[15px] text-muted-foreground" aria-hidden="true" />
-              <Input id="task-search" type="search" placeholder={t.search} className="h-[32px] w-[144px] pl-[30px]" />
+              <Input
+                id="task-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t.search}
+                className="h-[32px] w-[144px] pl-[30px]"
+              />
             </div>
             <Button type="button" variant="outline" size="sm" className="w-[97px]"><ListFilter />{t.filters}</Button>
             <Button type="button" variant="outline" size="sm" className="w-[104px]"><SlidersHorizontal />{t.display}</Button>
@@ -77,11 +143,11 @@ export default function CalendarPage() {
         </div>
         <section className="min-w-[790px] px-[24px] pt-[12px] pb-[24px]">
           <div className="mb-[18px] flex items-center justify-between pr-[72px]">
-            <h2 className="text-[16px] font-semibold">{t.month}</h2>
+            <h2 className="text-[16px] font-semibold" aria-live="polite">{monthTitle}</h2>
             <div className="flex items-center gap-[10px]">
-              <Button type="button" variant="outline" size="sm" className="w-[76px]">{t.today}</Button>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.previous}><ArrowLeft /></Button>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.next}><ArrowRight /></Button>
+              <Button type="button" variant="outline" size="sm" className="w-[76px]" onClick={goToToday}>{t.today}</Button>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.previous} onClick={() => moveMonth(-1)}><ArrowLeft /></Button>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.next} onClick={() => moveMonth(1)}><ArrowRight /></Button>
             </div>
           </div>
           <div className={`${grid} mb-[4px]`}>
@@ -90,46 +156,7 @@ export default function CalendarPage() {
             <span className={weekday}>{t.sunday}</span>
           </div>
           <div className={`${grid} border-t border-l border-border`}>
-              {/* Намуна: баъд ба .map() бо API иваз мешавад. */}
-              {dayCell(26, undefined, true)}
-              {dayCell(27, undefined, true)}
-              {dayCell(28, undefined, true)}
-              {dayCell(29, undefined, true)}
-              {dayCell(30, undefined, true)}
-              {dayCell(31, undefined, true)}
-              {dayCell(1)}
-
-              {dayCell(2)}
-              {dayCell(3)}
-              {dayCell(4)}
-              {dayCell(5)}
-              {dayCell(6)}
-              {dayCell(7)}
-              {dayCell(8)}
-
-              {dayCell(9)}
-              {dayCell(10)}
-              {dayCell(11)}
-              {dayCell(12)}
-              {dayCell(13)}
-              {dayCell(14)}
-              {dayCell(15)}
-
-              {dayCell(16)}
-              {dayCell(17)}
-              {dayCell(18)}
-              {dayCell(19)}
-              {dayCell(20)}
-              {dayCell(21)}
-              {dayCell(22)}
-
-              {dayCell(23)}
-              {dayCell(24, <Link href={`${path}/tasks/web-1`} className="block hover:underline">{task("WEB-1", t.checkoutShort)}</Link>)}
-              {dayCell(25, task("WEB-19", t.documentLabels))}
-              {dayCell(26, undefined, false, true)}
-              {dayCell(27, task("WEB-5", t.billing))}
-              {dayCell(28)}
-              {dayCell(29, task("WEB-12", t.expired))}
+            {days.map(renderDay)}
           </div>
         </section>
       </main>

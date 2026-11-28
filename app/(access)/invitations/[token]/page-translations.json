@@ -1,5 +1,26 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "title": "Invitation",
+    "invites": "invites you to",
+    "role": "Role",
+    "expires": "Expires",
+    "signIn": "Sign in",
+    "createAccount": "Create account"
+  },
+  "tg": {
+    "title": "Даъватнома",
+    "invites": "шуморо даъват мекунад ба",
+    "role": "Нақш",
+    "expires": "Мӯҳлат то",
+    "signIn": "Ворид шудан",
+    "createAccount": "Сохтани аккаунт"
+  },
+  "ru": {
+    "title": "Приглашение",
+    "invites": "приглашает вас в",
+    "role": "Роль",
+    "expires": "Истекает",
+    "signIn": "Войти",
+    "createAccount": "Создать аккаунт"
+  }
 }
