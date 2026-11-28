@@ -48,14 +48,16 @@ async function forwardWorkspace(
     if (body && contentType !== "application/json") return failure(415, "Send the request as JSON.");
   }
 
+  const data = body || (method === "POST" || method === "PATCH" ? "{}" : undefined);
+
   try {
     const response = await backend.request<unknown>({
       method,
       url: path + (needsSlash ? "/" : "") + request.nextUrl.search,
-      data: body || undefined,
+      data,
       headers: {
         ...(!publicInvite && token ? { Authorization: "Bearer " + token } : {}),
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(data ? { "Content-Type": "application/json" } : {}),
       },
       signal: request.signal,
       validateStatus: (status) => (status >= 200 && status < 300) || (status >= 400 && status < 500),
