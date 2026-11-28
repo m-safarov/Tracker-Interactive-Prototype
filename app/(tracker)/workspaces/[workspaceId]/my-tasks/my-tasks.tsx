@@ -67,11 +67,14 @@ function readList<T>(data: T[] | undefined, name: string): T[] {
 
 async function getIssues(projectPath: string, userId: string, filter: TaskFilter, signal: AbortSignal) {
   const issues: Issue[] = [];
+  const params = new URLSearchParams({ [filter]: userId, limit: "100" });
+  if (filter === "assignee") params.append(filter, userId);
   let cursor: string | null = null;
 
   do {
+    if (cursor) params.set("cursor", cursor);
     const { data }: { data: IssuePage } = await api.get<IssuePage>(`${projectPath}/issues`, {
-      params: { [filter]: userId, limit: 100, cursor },
+      params,
       signal,
     });
     issues.push(...readList(data?.data, "tasks"));

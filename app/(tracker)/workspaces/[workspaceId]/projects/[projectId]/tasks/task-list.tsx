@@ -84,12 +84,22 @@ const projectFormSchema = z.object({
 
 async function getIssues(path: string, filters: Record<string, string | undefined>, signal: AbortSignal) {
   const issues: Issue[] = [];
+  const params = new URLSearchParams({ limit: "100" });
+  if (filters.search) params.set("search", filters.search);
+  for (const name of ["state", "priority", "assignee", "label"]) {
+    const value = filters[name];
+    if (value) {
+      params.append(name, value);
+      params.append(name, value);
+    }
+  }
   let cursor: string | null = null;
 
   do {
+    if (cursor) params.set("cursor", cursor);
     const { data }: { data: IssuePage } = await api.get<IssuePage>(path + "/issues", {
       signal,
-      params: { ...filters, limit: 100, cursor },
+      params,
     });
     if (!Array.isArray(data?.data) || (data.next_cursor && data.next_cursor === cursor)) {
       throw new Error("Could not read the project tasks.");
