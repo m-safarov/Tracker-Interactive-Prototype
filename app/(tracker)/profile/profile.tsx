@@ -1,367 +1,348 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Globe } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cn } from "cn";
-import { Globe, X } from "lucide-react";
-import Link from "next/link";
-import { Avatar } from "radix-ui";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
-
+import { z } from "zod";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PageHeading from "@/components/page-heading";
+import WorkspaceSidebar from "@/components/workspace-sidebar";
 import {
-  getAuthError,
-  useChangePasswordMutation,
-  useGetProfileQuery,
-  useUpdateProfileMutation,
-} from "@/features/auth/auth-api";
-import { AuthProvider, FormField } from "@/features/auth/auth-screen";
-import {
-  changePasswordSchema,
-  profileFormSchema,
-  type AccountProfile,
-  type ChangePasswordBody,
-  type UpdateProfileBody,
+  changePasswordSchema, profileFormSchema,
+  type AccountProfile, type ChangePasswordBody, type UpdateProfileBody,
 } from "@/features/auth/schema";
-
+import { api, errorText } from "@/lib/api";
 import translations from "./page-translations.json";
 
-type Language = keyof typeof translations;
-type Theme = "light" | "dark" | "system";
-type ProfileText = typeof translations.en;
-type RequestError = keyof ProfileText["errors"];
+const t = translations.en;
+const profileKey = ["profile"];
+const nameFormSchema = profileFormSchema.pick({ display_name: true });
+const photoTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const photoFileSchema = z.file()
+  .min(1, t.invalidPhotoFile)
+  .max(1024 * 1024, t.photoFileTooLarge)
+  .mime(photoTypes, t.invalidPhotoFile);
+const savedPhotoSchema = z.object({ name: z.string().min(1), src: z.string().startsWith("data:image/") });
+type ProfilePhoto = z.infer<typeof savedPhotoSchema>;
 
-const loginUrl = "/login?next=%2Fprofile";
-const themeKey = "tracker-profile-theme";
-const languageKey = "tracker-profile-language";
-const preferenceEvent = "tracker-profile-preferences-changed";
-const systemTheme = "(prefers-color-scheme: dark)";
-const colors = "[--primary:#3b5bdb] [--primary-foreground:#fff] [--radius:6px] [--ring:#3b5bdb]";
-const selectStyle = "h-8 w-full appearance-none rounded-md border border-input bg-background text-center text-sm outline-none focus-visible:border-ring";
+function photoStorageKey(accountId: string) {
+  return "tracker:profile-photo:" + accountId;
+}
+
+function loadSavedPhoto(accountId: string) {
+  try {
+    const stored = localStorage.getItem(photoStorageKey(accountId));
+    const photo = savedPhotoSchema.safeParse(stored ? JSON.parse(stored) : null);
+    return photo.success ? photo.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function readPhotoFile(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadProfile() {
+  const { data } = await api.get<AccountProfile>("/auth/me", { baseURL: "/api" });
+  return { ...data, savedPhoto: loadSavedPhoto(data.id) };
+}
+
+async function saveProfile(values: UpdateProfileBody) {
+  const { data } = await api.patch<AccountProfile>("/auth/me", values, { baseURL: "/api" });
+  return data;
+}
+
+async function changePassword(values: ChangePasswordBody) {
+  await api.post("/auth/change-password", values, { baseURL: "/api" });
+}
 
 export default function ProfilePage() {
-  return (
-    <AuthProvider>
-      <ProfileContent />
-    </AuthProvider>
-  );
-}
-
-function ProfileContent() {
-
-  const { data: profile, error, isLoading, refetch } = useGetProfileQuery();
-  const { language, theme, isDark } = useProfilePreferences();
-  const text = translations[language];
-  const needsLogin = error && "status" in error && error.status === 401;
-
-  return (
-    <div
-      lang={language}
-      translate="no"
-      className={cn("min-h-dvh text-foreground", colors, isDark ? "dark bg-background" : "bg-white")}
-    >
-      <header className="border-b">
-        <div className="mx-auto flex min-h-12 max-w-[960px] items-center justify-between gap-4 px-4 sm:px-6">
-          <p className="text-sm">
-            <span className="text-muted-foreground">Tracker /</span> {text.profile}
-          </p>
-          {profile && (
-            <div className="flex min-w-0 items-center gap-2">
-              <ProfileAvatar profile={profile} />
-              <span data-slot="profile-display-name" className="truncate text-sm font-medium">
-                {profile.display_name}
-              </span>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[960px] px-4 py-5 sm:px-6">
-        <h1 className="mb-10 text-base font-semibold">{text.profile}</h1>
-        {isLoading && <p role="status" className="text-sm text-muted-foreground">{text.loading}</p>}
-        {profile && (
-          <div className="grid max-w-[592px] gap-5">
-            <ProfileForm key={profile.id} profile={profile} text={text} />
-            <Preferences theme={theme} isDark={isDark} language={language} text={text} />
-          </div>
-        )}
-        {!profile && error && (
-          <div className="grid justify-items-start gap-3">
-            <p role="alert" className="text-sm text-destructive">{text.errors[requestError(error)]}</p>
-            {needsLogin
-              ? <Button asChild><Link href={loginUrl}>{text.signIn}</Link></Button>
-              : <Button variant="outline" onClick={refetch}>{text.retry}</Button>}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-function ProfileForm({ profile, text }: { profile: AccountProfile; text: ProfileText }) {
-  const [updateProfile, { error: saveError, isSuccess }] = useUpdateProfileMutation();
-  const { register, handleSubmit, reset, formState } = useForm({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: profileValues(profile),
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<ProfilePhoto | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const [readingPhoto, setReadingPhoto] = useState(false);
+  const profile = useQuery({
+    queryKey: profileKey,
+    queryFn: loadProfile,
+    refetchOnWindowFocus: false,
+    gcTime: 0,
   });
+  const updateProfile = useMutation({
+    mutationFn: ({ name }: { name: string; photo: ProfilePhoto | null }) => saveProfile({ display_name: name }),
+    onSuccess: (updatedProfile, { photo }) => {
+      if (photo) {
+        try {
+          localStorage.setItem(photoStorageKey(updatedProfile.id), JSON.stringify(photo));
+          setSelectedPhoto(null);
+        } catch {
+          setPhotoError(t.photoSaveError);
+        }
+      }
 
-  const { errors, isSubmitting, isDirty } = formState;
-  const nameError = errors.display_name && (
-    errors.display_name.type === "too_big" ? text.nameTooLong : text.nameRequired
-  );
-
-  async function saveProfile(values: UpdateProfileBody) {
-    const { data } = await updateProfile(values);
-    if (data) reset(profileValues(data));
-  }
-
-  return (
-    <SettingsCard title={text.profile}>
-      <ProfileAvatar profile={profile} />
-      <form onSubmit={handleSubmit(saveProfile)} method="post" noValidate className="mt-4 grid gap-4">
-        <FormField
-          {...register("display_name")}
-          id="profile-name"
-          label={text.name}
-          autoComplete="name"
-          error={nameError}
-          required
-        />
-        <FormField
-          {...register("avatar_url")}
-          id="profile-photo"
-          label={text.photoUrl}
-          type="url"
-          error={errors.avatar_url && text.invalidPhoto}
-        />
-        <FormField id="profile-email" label={text.email} type="email" value={profile.email} readOnly />
-
-        {saveError && (
-          <p role="alert" className="text-sm text-destructive">{text.errors[requestError(saveError)]}</p>
-        )}
-        <div className="flex items-center gap-3 pt-1">
-          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? text.saving : text.save}</Button>
-          {isSuccess && !isDirty && <span role="status" className="text-sm text-muted-foreground">{text.saved}</span>}
-        </div>
-      </form>
-    </SettingsCard>
-  );
-}
-
-function profileValues(profile: AccountProfile) {
-  return {
-    display_name: profile.display_name,
-    avatar_url: profile.avatar_url ?? "",
-  };
-}
-
-function ChangePasswordForm({ text }: { text: ProfileText }) {
-  const [changePassword, { reset: clearPasswordRequest }] = useChangePasswordMutation();
-  const [serverError, setServerError] = useState<RequestError>();
-  const { register, handleSubmit, setError, formState } = useForm({
+      queryClient.setQueryData(profileKey, { ...updatedProfile, savedPhoto: loadSavedPhoto(updatedProfile.id) });
+      return queryClient.invalidateQueries({ queryKey: profileKey });
+    },
+  });
+  const updatePassword = useMutation({
+    mutationFn: changePassword,
+    gcTime: 0,
+    onSuccess: () => router.replace("/sign-in"),
+  });
+  const profileForm = useForm({
+    resolver: zodResolver(nameFormSchema),
+    values: { display_name: profile.data?.display_name ?? "" },
+  });
+  const passwordForm = useForm({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: { current_password: "", new_password: "" },
   });
 
-  const { errors, isSubmitting } = formState;
-  const currentPasswordError = errors.current_password && (
-    errors.current_password.type === "incorrect" ? text.currentIncorrect : text.currentRequired
-  );
+  const field = "flex flex-col gap-[6px]";
+  const cardHeader = "-mx-[16px] -mt-[16px] min-h-[48px] items-center border-b border-border px-[16px]";
+  const preference = "flex flex-wrap items-center justify-between gap-[8px]";
+  const select = "h-[32px] w-[194px] max-w-full";
+  const errorClass = "text-[13px] text-destructive";
+  const nameError = profileForm.formState.errors.display_name;
+  const photo = selectedPhoto ?? profile.data?.savedPhoto;
+  const photoStatus = photo?.name ?? (profile.data?.avatar_url ? t.currentPhoto : t.noPhoto);
+  const savingProfile = updateProfile.isPending;
+  const currentPasswordError = passwordForm.formState.errors.current_password;
+  const newPasswordError = passwordForm.formState.errors.new_password;
 
-  async function savePassword(values: ChangePasswordBody) {
-    setServerError(undefined);
-    const { error } = await changePassword(values);
-    clearPasswordRequest();
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
 
-    if (!error) {
-      window.location.replace(loginUrl);
-    } else if (getAuthError(error).field === "current_password") {
-      setError("current_password", { type: "incorrect" }, { shouldFocus: true });
-    } else {
-      setServerError(requestError(error));
+    setPhotoError("");
+    setSelectedPhoto(null);
+    updateProfile.reset();
+
+    const result = photoFileSchema.safeParse(file);
+    if (!result.success) {
+      setPhotoError(result.error.issues[0].message);
+      return;
+    }
+
+    setReadingPhoto(true);
+    try {
+      const src = await readPhotoFile(file);
+      const image = new Image();
+      image.src = src;
+      await image.decode();
+      setSelectedPhoto({ name: file.name, src });
+    } catch {
+      setPhotoError(t.invalidPhotoFile);
+    } finally {
+      setReadingPhoto(false);
+    }
+  }
+
+  function save(values: z.infer<typeof nameFormSchema>) {
+    if (readingPhoto || savingProfile) return;
+    setPhotoError("");
+    updateProfile.mutate({ name: values.display_name, photo: selectedPhoto });
+  }
+
+  function clearPasswordForm(open: boolean) {
+    if (!open) {
+      passwordForm.reset();
+      updatePassword.reset();
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(savePassword)} method="post" noValidate className="grid gap-4">
-      <FormField
-        {...register("current_password")}
-        id="current-password"
-        label={text.currentPassword}
-        type="password"
-        autoComplete="current-password"
-        error={currentPasswordError}
-        required
-      />
-      <FormField
-        {...register("new_password")}
-        id="new-password"
-        label={text.newPassword}
-        type="password"
-        autoComplete="new-password"
-        error={errors.new_password && text.passwordTooShort}
-        required
-      />
-      {serverError && <p role="alert" className="text-sm text-destructive">{text.errors[serverError]}</p>}
-      <DialogFooter>
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? text.changing : text.password}</Button>
-        <DialogClose asChild>
-          <Button type="button" variant="outline">{text.close}</Button>
-        </DialogClose>
-      </DialogFooter>
-    </form>
-  );
-}
-
-function Preferences({
-  theme,
-  isDark,
-  language,
-  text,
-}: {
-  theme: Theme;
-  isDark: boolean;
-  language: Language;
-  text: ProfileText;
-}) {
-  return (
-    <SettingsCard title={text.preferences}>
-      <div className="grid gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <label htmlFor="profile-language" className="text-sm">{text.language}</label>
-          <div data-slot="native-select-wrapper" className="relative w-48 max-w-[55%]">
-            <Globe aria-hidden="true" className="pointer-events-none absolute top-2 left-2 size-4 text-muted-foreground" />
-            <select
-              data-slot="native-select"
-              id="profile-language"
-              className={selectStyle}
-              value={language}
-              onChange={(event) => savePreference(languageKey, event.target.value)}
-            >
-              <option value="en" lang="en">English</option>
-              <option value="tg" lang="tg">Тоҷикӣ</option>
-              <option value="ru" lang="ru">Русский</option>
-            </select>
-          </div>
+    <div className="flex min-h-screen">
+      <WorkspaceSidebar />
+      <main className="min-w-0 flex-1">
+        <PageHeading crumbs={[t.team, t.profile]} title={t.profile} />
+        <div className="flex w-full max-w-[632px] flex-col gap-[16px] px-[24px] py-[28px] text-[13px]">
+          <Card className="gap-[16px] pb-[20px]">
+            <CardHeader className={cardHeader}><CardTitle>{t.profile}</CardTitle></CardHeader>
+            {profile.isPending && <p role="status">{t.loading}</p>}
+            {profile.isError && (
+              <div className={field}>
+                <p role="alert" className={errorClass}>{errorText(profile.error)}</p>
+                <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => profile.refetch()}>
+                  {t.retry}
+                </Button>
+              </div>
+            )}
+            {profile.isSuccess && (
+              <>
+                <Avatar
+                  name={profile.data.display_name}
+                  src={photo?.src ?? profile.data.avatar_url ?? undefined}
+                  className="size-[32px]"
+                />
+                <form
+                  method="post"
+                  noValidate
+                  onSubmit={profileForm.handleSubmit(save)}
+                  aria-busy={savingProfile}
+                  className="flex flex-col gap-[10px]"
+                >
+                  <div className={field}>
+                    <Label htmlFor="profile-name">{t.name}</Label>
+                    <Input
+                      id="profile-name"
+                      autoComplete="name"
+                      readOnly={savingProfile}
+                      aria-invalid={!!nameError}
+                      aria-describedby={nameError ? "profile-name-error" : undefined}
+                      {...profileForm.register("display_name")}
+                    />
+                    {nameError && <p id="profile-name-error" role="alert" className={errorClass}>{nameError.message}</p>}
+                  </div>
+                  <div className={field}>
+                    <Label htmlFor="profile-photo">{t.photo}</Label>
+                    <Input
+                      id="profile-photo"
+                      ref={photoInput}
+                      type="file"
+                      accept={photoTypes.join(",")}
+                      className="hidden"
+                      onChange={choosePhoto}
+                      disabled={readingPhoto || savingProfile}
+                    />
+                    <div className="flex flex-wrap items-center gap-[8px]">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-describedby={photoError ? "profile-photo-status profile-photo-error" : "profile-photo-status"}
+                        onClick={() => photoInput.current?.click()}
+                        disabled={readingPhoto || savingProfile}
+                      >
+                        {t.choosePhoto}
+                      </Button>
+                      <span id="profile-photo-status" aria-live="polite" className="break-all text-muted-foreground">
+                        {readingPhoto ? t.readingPhoto : photoStatus}
+                      </span>
+                    </div>
+                    {photoError && <p id="profile-photo-error" role="alert" className={errorClass}>{photoError}</p>}
+                  </div>
+                  <div className={field}>
+                    <Label htmlFor="profile-email">{t.email}</Label>
+                    <Input id="profile-email" type="email" value={profile.data.email} readOnly />
+                  </div>
+                  <Button type="submit" size="sm" disabled={readingPhoto || savingProfile} className="mt-[12px] self-start">
+                    {savingProfile ? t.saving : t.save}
+                  </Button>
+                  {updateProfile.isError && <p role="alert" className={errorClass}>{errorText(updateProfile.error)}</p>}
+                  {updateProfile.isSuccess && !photoError && !profileForm.formState.isDirty && <p role="status">{t.saved}</p>}
+                </form>
+              </>
+            )}
+          </Card>
+          <Card className="gap-[16px] pb-[18px]">
+            <CardHeader className={cardHeader}><CardTitle>{t.preferences}</CardTitle></CardHeader>
+            <div className={preference} role="group" aria-label={t.language}>
+              <span>{t.language}</span>
+              <Select defaultValue="en">
+                <SelectTrigger className={select}><Globe className="size-[14px] text-muted-foreground" aria-hidden="true" /><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{t.english}</SelectItem>
+                  <SelectItem value="tg">{t.tajik}</SelectItem>
+                  <SelectItem value="ru">{t.russian}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className={preference} role="group" aria-label={t.theme}>
+              <span>{t.theme}</span>
+              <Select defaultValue="system">
+                <SelectTrigger className={select}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system">{t.system}</SelectItem>
+                  <SelectItem value="light">{t.light}</SelectItem>
+                  <SelectItem value="dark">{t.dark}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Dialog onOpenChange={clearPasswordForm}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="mt-[8px] self-start">
+                  {t.changePassword}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t.changePassword}</DialogTitle>
+                  <DialogDescription>{t.passwordHint}</DialogDescription>
+                </DialogHeader>
+                <form
+                  method="post"
+                  noValidate
+                  onSubmit={passwordForm.handleSubmit((values) => updatePassword.mutate(values))}
+                  aria-busy={updatePassword.isPending}
+                  className="flex flex-col gap-[10px]"
+                >
+                  <div className={field}>
+                    <Label htmlFor="profile-current-password">{t.currentPassword}</Label>
+                    <Input
+                      id="profile-current-password"
+                      type="password"
+                      autoComplete="current-password"
+                      readOnly={updatePassword.isPending}
+                      aria-invalid={!!currentPasswordError}
+                      aria-describedby={currentPasswordError ? "profile-current-password-error" : undefined}
+                      {...passwordForm.register("current_password")}
+                    />
+                    {currentPasswordError && (
+                      <p id="profile-current-password-error" role="alert" className={errorClass}>{currentPasswordError.message}</p>
+                    )}
+                  </div>
+                  <div className={field}>
+                    <Label htmlFor="profile-new-password">{t.newPassword}</Label>
+                    <Input
+                      id="profile-new-password"
+                      type="password"
+                      autoComplete="new-password"
+                      readOnly={updatePassword.isPending}
+                      aria-invalid={!!newPasswordError}
+                      aria-describedby={newPasswordError ? "profile-new-password-error" : undefined}
+                      {...passwordForm.register("new_password")}
+                    />
+                    {newPasswordError && (
+                      <p id="profile-new-password-error" role="alert" className={errorClass}>{newPasswordError.message}</p>
+                    )}
+                  </div>
+                  {updatePassword.isError && <p role="alert" className={errorClass}>{errorText(updatePassword.error)}</p>}
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline" size="sm" disabled={updatePassword.isPending}>{t.close}</Button>
+                    </DialogClose>
+                    <Button type="submit" size="sm" disabled={updatePassword.isPending}>
+                      {updatePassword.isPending ? t.changing : t.changePassword}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </Card>
         </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <label htmlFor="profile-theme" className="text-sm">{text.theme}</label>
-          <select
-            data-slot="native-select"
-            id="profile-theme"
-            className={cn(selectStyle, "w-48 max-w-[55%]")}
-            value={theme}
-            onChange={(event) => savePreference(themeKey, event.target.value)}
-          >
-            <option value="system">{text.system}</option>
-            <option value="light">{text.light}</option>
-            <option value="dark">{text.dark}</option>
-          </select>
-        </div>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button type="button" variant="outline" className="mt-2 justify-self-start">{text.password}</Button>
-          </DialogTrigger>
-          <DialogContent lang={language} translate="no" showCloseButton={false} className={cn(colors, isDark && "dark")}>
-            <DialogHeader>
-              <DialogTitle>{text.password}</DialogTitle>
-              <DialogDescription>{text.passwordHint}</DialogDescription>
-            </DialogHeader>
-            <ChangePasswordForm text={text} />
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" size="icon-sm" className="absolute top-2 right-2" aria-label={text.close}>
-                <X />
-              </Button>
-            </DialogClose>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </SettingsCard>
-  );
-}
-
-function useProfilePreferences() {
-  const savedLanguage = useSavedPreference(languageKey);
-  const savedTheme = useSavedPreference(themeKey);
-  const systemIsDark = useSyncExternalStore(
-    subscribeToPreferences,
-    () => window.matchMedia(systemTheme).matches,
-    () => false,
-  );
-
-  const language: Language = savedLanguage === "tg" || savedLanguage === "ru" ? savedLanguage : "en";
-  const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
-  const isDark = theme === "dark" || (theme === "system" && systemIsDark);
-
-  return { language, theme, isDark };
-}
-
-function useSavedPreference(key: string) {
-  return useSyncExternalStore(
-    subscribeToPreferences,
-    () => localStorage.getItem(key),
-    () => null,
-  );
-}
-
-function savePreference(key: string, value: string) {
-  localStorage.setItem(key, value);
-  // The storage event fires in other tabs. Notify this tab too.
-  window.dispatchEvent(new Event(preferenceEvent));
-}
-
-function subscribeToPreferences(update: () => void) {
-  const listeners = new AbortController();
-  const options = { signal: listeners.signal };
-
-  window.matchMedia(systemTheme).addEventListener("change", update, options);
-  window.addEventListener(preferenceEvent, update, options);
-  window.addEventListener("storage", update, options);
-
-  return () => listeners.abort();
-}
-
-function requestError(error: unknown): RequestError {
-  if (error && typeof error === "object" && "status" in error) {
-    if (error.status === 401 || error.status === 403) return "sessionExpired";
-    if (error.status === 429) return "tooManyAttempts";
-    if (error.status === 400) return "invalidDetails";
-  }
-
-  return "requestFailed";
-}
-
-function ProfileAvatar({ profile }: { profile: AccountProfile }) {
-  const [firstName, secondName = ""] = profile.display_name.trim().split(/\s+/);
-  const initials = (firstName.charAt(0) + secondName.charAt(0)).toUpperCase();
-
-  return (
-    <Avatar.Root data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full">
-      <Avatar.Image src={profile.avatar_url ?? undefined} referrerPolicy="no-referrer" alt="" className="size-full object-cover" />
-      <Avatar.Fallback data-slot="avatar-fallback" className="flex size-full items-center justify-center bg-indigo-100 text-xs font-semibold text-indigo-700">
-        {initials || "?"}
-      </Avatar.Fallback>
-    </Avatar.Root>
-  );
-}
-
-function SettingsCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section data-slot="card" className="overflow-hidden rounded-lg border bg-card text-card-foreground">
-      <h2 data-slot="card-header" className="border-b px-4 py-3 text-sm font-semibold">{title}</h2>
-      <div data-slot="card-content" className="p-4">{children}</div>
-    </section>
+      </main>
+    </div>
   );
 }
