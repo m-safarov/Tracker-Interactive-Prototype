@@ -2,12 +2,21 @@ import { Progress } from "@/components/ui/progress";
 
 // Карточкаи пешрафт дар Cycle detail ва Module detail.
 // subtitle — сатри болоӣ (сана ё "роҳбар · сана"), percent — аз 0 то 100.
+interface Progress {
+  backlog: number;
+  unstarted: number;
+  started: number;
+  completed: number;
+  cancelled: number;
+}
+
 interface ProgressCardProps {
   subtitle: string;
   percent: number;
+  progress?: Progress;
 }
 
-export default function ProgressCard({ subtitle, percent }: ProgressCardProps) {
+export default function ProgressCard({ subtitle, percent, progress }: ProgressCardProps) {
   const count = "flex w-[124px] gap-[10px]";
 
   return (
@@ -19,13 +28,13 @@ export default function ProgressCard({ subtitle, percent }: ProgressCardProps) {
       </div>
       <Progress value={percent} className="[&>div]:bg-emerald-500" />
 
-      {/* Шумораи вазифаҳо аз рӯи гурӯҳ. Намуна: баъд аз API меояд. */}
+      {/* Шумораи вазифаҳо аз рӯи гурӯҳ. */}
       <div className="flex text-[12px] text-muted-foreground">
-        <span className={count}>Backlog <b className="font-normal">1</b></span>
-        <span className={count}>Unstarted <b className="font-normal">1</b></span>
-        <span className={count}>Started <b className="font-normal">3</b></span>
-        <span className={count}>Completed <b className="font-normal">2</b></span>
-        <span className={count}>Cancelled <b className="font-normal">1</b></span>
+        <span className={count}>Backlog <b className="font-normal">{progress?.backlog}</b></span>
+        <span className={count}>Unstarted <b className="font-normal">{progress?.unstarted}</b></span>
+        <span className={count}>Started <b className="font-normal">{progress?.started}</b></span>
+        <span className={count}>Completed <b className="font-normal">{progress?.completed}</b></span>
+        <span className={count}>Cancelled <b className="font-normal">{progress?.cancelled}</b></span>
       </div>
     </div>
   );
