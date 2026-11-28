@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal } from "lucide-react";
@@ -32,6 +33,7 @@ export default function ProjectLabelsPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
+  const [editingLabel, setEditingLabel] = useState<Label | null>(null);
 
   const t = translations.en;
 
@@ -102,6 +104,7 @@ export default function ProjectLabelsPage() {
             <CardHeader className="items-center border-b border-border px-[16px] py-[8px]">
               <CardTitle className="text-[14px]">{t.labels}</CardTitle>
               <NewLabelDialog />
+              {editingLabel && <NewLabelDialog label={editingLabel} onClose={() => setEditingLabel(null)} />}
             </CardHeader>
 
             {/* Рӯйхати нишонаҳо. Ранг аз API меояд, барои ҳамин style. "1A" охири ранг = заминаи шаффоф. */}
@@ -131,6 +134,7 @@ export default function ProjectLabelsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      <DropdownMenuItem onSelect={() => setEditingLabel(el)}>Edit</DropdownMenuItem>
                       <DropdownMenuItem
                         destructive
                         onSelect={() => {

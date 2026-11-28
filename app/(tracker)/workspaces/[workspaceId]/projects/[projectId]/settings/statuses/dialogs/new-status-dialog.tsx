@@ -20,12 +20,24 @@ const schema = z.object({
 });
 type StatusForm = z.infer<typeof schema>;
 
-// Dev 2 — Диалоги сохтани статус.
-export default function NewStatusDialog() {
+interface StatusItem {
+  id: string;
+  name: string;
+  color: string;
+  group: StatusForm["group"];
+}
+
+interface NewStatusDialogProps {
+  status?: StatusItem;
+  onClose?: () => void;
+}
+
+// Dev 2 — Диалоги сохтан ва тағйир додани статус.
+export default function NewStatusDialog({ status, onClose }: NewStatusDialogProps) {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!status);
 
   const {
     register,
@@ -34,8 +46,13 @@ export default function NewStatusDialog() {
     formState: { errors },
   } = useForm<StatusForm>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", color: "#3B82F6", group: "unstarted" },
+    defaultValues: { name: status?.name ?? "", color: status?.color ?? "#3B82F6", group: status?.group ?? "unstarted" },
   });
+
+  function changeOpen(value: boolean) {
+    setOpen(value);
+    if (!value) onClose?.();
+  }
 
   const postStatus = useMutation({
     mutationFn: (values: StatusForm) => api.post(`${p}/states/`, values),
@@ -46,21 +63,33 @@ export default function NewStatusDialog() {
     },
   });
 
+  const editStatus = useMutation({
+    mutationFn: (values: StatusForm) => api.patch(`${p}/states/${status?.id}`, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["states", workspaceId, projectId] });
+      changeOpen(false);
+    },
+  });
+
+  const saveStatus = status ? editStatus : postStatus;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline">
-          <Plus /> New status
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={changeOpen}>
+      {!status && (
+        <DialogTrigger asChild>
+          <Button type="button" size="sm" variant="outline">
+            <Plus /> New status
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New status</DialogTitle>
+          <DialogTitle>{status ? "Edit status" : "New status"}</DialogTitle>
           <DialogDescription>Add a step to the project workflow.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit((values) => postStatus.mutate(values))} className="flex flex-col gap-[12px]">
+        <form onSubmit={handleSubmit((values) => saveStatus.mutate(values))} className="flex flex-col gap-[12px]">
           <div className="flex flex-col gap-[6px]">
             <Label htmlFor="status-name">Name</Label>
             <Input id="status-name" placeholder="In Review" {...register("name")} />
@@ -94,9 +123,9 @@ export default function NewStatusDialog() {
             </select>
           </div>
 
-          {postStatus.error && (
+          {saveStatus.error && (
             <p role="alert" className="text-[12px] text-[#DC2626]">
-              {errorText(postStatus.error)}
+              {errorText(saveStatus.error)}
             </p>
           )}
 
@@ -106,8 +135,8 @@ export default function NewStatusDialog() {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={postStatus.isPending}>
-              {postStatus.isPending ? "Creating..." : "Create status"}
+            <Button type="submit" disabled={saveStatus.isPending}>
+              {saveStatus.isPending ? "Saving..." : status ? "Save changes" : "Create status"}
             </Button>
           </DialogFooter>
         </form>
