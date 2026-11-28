@@ -43,8 +43,10 @@ function authFailure(error: unknown, action: "login" | "register") {
 
 function checkJsonRequest(request: NextRequest) {
   const origin = request.headers.get("origin");
+  const host = request.headers.get("host");
+  const expectedOrigin = host ? request.nextUrl.protocol + "//" + host.toLowerCase() : request.nextUrl.origin;
   const contentType = request.headers.get("content-type")?.split(";")[0].trim();
-  if (origin && origin !== request.nextUrl.origin) {
+  if (origin && origin !== expectedOrigin) {
     return failure(403, "This request must come from Tracker.");
   }
   if (contentType !== "application/json") {
