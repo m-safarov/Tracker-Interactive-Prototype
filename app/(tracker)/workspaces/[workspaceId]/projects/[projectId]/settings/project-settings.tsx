@@ -87,7 +87,7 @@ export default function ProjectSettingsPage() {
   });
 
   const editProject = useMutation({
-    mutationFn: (values: ProjectForm) => api.patch(p, { ...values, lead_id: values.lead_id || null }),
+    mutationFn: (values: ProjectForm) => api.patch(p, { name: values.name, description: values.description, lead_id: values.lead_id || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", workspaceId, projectId] });
     },

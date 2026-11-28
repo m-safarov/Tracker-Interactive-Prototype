@@ -149,6 +149,11 @@ export default function ModuleDetailPage() {
   const moduleIssueIds = getModuleIssues.map((el) => el.id);
   const otherIssues = getProjectIssues.filter((issue) => !moduleIssueIds.includes(issue.id));
 
+  function toggleIssue(id: string) {
+    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter((item) => item !== id));
+    else setSelectedIds([...selectedIds, id]);
+  }
+
   const leadName = getProjectMembers.find((member) => member.user_id === getModule?.lead_id)?.user.display_name;
   const start = getModule?.start_date ? new Date(getModule.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
   const end = getModule?.target_date ? new Date(getModule.target_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
@@ -183,9 +188,7 @@ export default function ModuleDetailPage() {
                   <label key={el.id} className="flex h-[36px] items-center gap-[8px] text-[13px]">
                     <Checkbox
                       checked={selectedIds.includes(el.id)}
-                      onCheckedChange={(checked) =>
-                        checked ? setSelectedIds([...selectedIds, el.id]) : setSelectedIds(selectedIds.filter((id) => id !== el.id))
-                      }
+                      onCheckedChange={() => toggleIssue(el.id)}
                     />
                     <span className="w-[60px] text-[12px] text-muted-foreground">
                       {getProject?.identifier}-{el.sequence_id}

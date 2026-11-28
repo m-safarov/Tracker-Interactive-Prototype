@@ -21,7 +21,7 @@ interface ProjectMember {
 interface Module {
   id: string;
   name: string;
-  status: string;
+  status: "backlog" | "in_progress" | "paused" | "completed" | "cancelled";
   lead_id: string | null;
   start_date: string | null;
   target_date: string | null;
@@ -46,7 +46,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(!!module);
+  const [open, setOpen] = useState(module !== undefined);
 
   const {
     register,
@@ -58,7 +58,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
     defaultValues: {
       name: module?.name ?? "",
       lead_id: module?.lead_id ?? "",
-      status: (module?.status as ModuleForm["status"]) ?? "backlog",
+      status: module?.status ?? "backlog",
       start_date: module?.start_date?.slice(0, 10) ?? "",
       target_date: module?.target_date?.slice(0, 10) ?? "",
     },
@@ -66,7 +66,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const { data: getProjectMembers = [] } = useQuery({
@@ -110,6 +110,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
   });
 
   const saveModule = module ? editModule : postModule;
+  const buttonText = module ? "Save changes" : "Create module";
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -200,7 +201,7 @@ export default function NewModuleDialog({ module, onClose }: NewModuleDialogProp
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saveModule.isPending}>
-              {saveModule.isPending ? "Saving..." : module ? "Save changes" : "Create module"}
+              {saveModule.isPending ? "Saving..." : buttonText}
             </Button>
           </DialogFooter>
         </form>

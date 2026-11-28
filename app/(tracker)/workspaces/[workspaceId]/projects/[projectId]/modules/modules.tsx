@@ -26,7 +26,7 @@ interface Project {
 interface Module {
   id: string;
   name: string;
-  status: string;
+  status: "backlog" | "in_progress" | "paused" | "completed" | "cancelled";
   lead_id: string | null;
   start_date: string | null;
   target_date: string | null;

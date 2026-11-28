@@ -35,7 +35,7 @@ export default function NewLabelDialog({ label, onClose }: NewLabelDialogProps) 
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(!!label);
+  const [open, setOpen] = useState(label !== undefined);
 
   const {
     register,
@@ -49,7 +49,7 @@ export default function NewLabelDialog({ label, onClose }: NewLabelDialogProps) 
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const postLabel = useMutation({
@@ -70,6 +70,7 @@ export default function NewLabelDialog({ label, onClose }: NewLabelDialogProps) 
   });
 
   const saveLabel = label ? editLabel : postLabel;
+  const buttonText = label ? "Save changes" : "Create label";
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -120,7 +121,7 @@ export default function NewLabelDialog({ label, onClose }: NewLabelDialogProps) 
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saveLabel.isPending}>
-              {saveLabel.isPending ? "Saving..." : label ? "Save changes" : "Create label"}
+              {saveLabel.isPending ? "Saving..." : buttonText}
             </Button>
           </DialogFooter>
         </form>

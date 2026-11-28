@@ -135,6 +135,11 @@ export default function CycleDetailPage() {
   const cycleIssueIds = getCycleIssues.map((el) => el.id);
   const otherIssues = getProjectIssues.filter((issue) => !cycleIssueIds.includes(issue.id));
 
+  function toggleIssue(id: string) {
+    if (selectedIds.includes(id)) setSelectedIds(selectedIds.filter((item) => item !== id));
+    else setSelectedIds([...selectedIds, id]);
+  }
+
   const start = getCycle?.start_date ? new Date(getCycle.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
   const end = getCycle?.end_date ? new Date(getCycle.end_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
 
@@ -167,9 +172,7 @@ export default function CycleDetailPage() {
                   <label key={el.id} className="flex h-[36px] items-center gap-[8px] text-[13px]">
                     <Checkbox
                       checked={selectedIds.includes(el.id)}
-                      onCheckedChange={(checked) =>
-                        checked ? setSelectedIds([...selectedIds, el.id]) : setSelectedIds(selectedIds.filter((id) => id !== el.id))
-                      }
+                      onCheckedChange={() => toggleIssue(el.id)}
                     />
                     <span className="w-[60px] text-[12px] text-muted-foreground">
                       {getProject?.identifier}-{el.sequence_id}

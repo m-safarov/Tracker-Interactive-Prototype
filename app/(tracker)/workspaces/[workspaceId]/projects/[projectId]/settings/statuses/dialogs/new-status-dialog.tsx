@@ -24,7 +24,7 @@ interface StatusItem {
   id: string;
   name: string;
   color: string;
-  group: StatusForm["group"];
+  group: "backlog" | "unstarted" | "started" | "completed" | "cancelled";
 }
 
 interface NewStatusDialogProps {
@@ -37,7 +37,7 @@ export default function NewStatusDialog({ status, onClose }: NewStatusDialogProp
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(!!status);
+  const [open, setOpen] = useState(status !== undefined);
 
   const {
     register,
@@ -51,7 +51,7 @@ export default function NewStatusDialog({ status, onClose }: NewStatusDialogProp
 
   function changeOpen(value: boolean) {
     setOpen(value);
-    if (!value) onClose?.();
+    if (!value && onClose) onClose();
   }
 
   const postStatus = useMutation({
@@ -72,6 +72,7 @@ export default function NewStatusDialog({ status, onClose }: NewStatusDialogProp
   });
 
   const saveStatus = status ? editStatus : postStatus;
+  const buttonText = status ? "Save changes" : "Create status";
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -136,7 +137,7 @@ export default function NewStatusDialog({ status, onClose }: NewStatusDialogProp
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saveStatus.isPending}>
-              {saveStatus.isPending ? "Saving..." : status ? "Save changes" : "Create status"}
+              {saveStatus.isPending ? "Saving..." : buttonText}
             </Button>
           </DialogFooter>
         </form>
