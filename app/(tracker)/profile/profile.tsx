@@ -61,17 +61,17 @@ function readPhotoFile(file: File) {
 }
 
 async function loadProfile() {
-  const { data } = await api.get<AccountProfile>("/auth/me");
+  const { data } = await api.get<AccountProfile>("/auth/me", { baseURL: "/api" });
   return { ...data, savedPhoto: loadSavedPhoto(data.id) };
 }
 
 async function saveProfile(values: UpdateProfileBody) {
-  const { data } = await api.patch<AccountProfile>("/auth/me", values);
+  const { data } = await api.patch<AccountProfile>("/auth/me", values, { baseURL: "/api" });
   return data;
 }
 
 async function changePassword(values: ChangePasswordBody) {
-  await api.post("/auth/change-password", values);
+  await api.post("/auth/change-password", values, { baseURL: "/api" });
 }
 
 export default function ProfilePage() {

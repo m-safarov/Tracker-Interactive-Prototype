@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { CalendarDays, Circle, CircleCheck, CircleDashed, CircleX, Columns3, Contrast, List, ListFilter, Minus, OctagonExclamationPoint, Plus, Search, SignalHigh, SignalLow, SignalMedium, SlidersHorizontal, TableProperties, type LucideIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { useBoardStore } from "@/app/(tracker)/workspaces/store/board-store";
 import NewTaskDialog from "../dialogs/new-task-dialog";
 import translations from "./page-translations.json";
 
@@ -32,7 +33,10 @@ export default function BoardPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const path = `/workspaces/${workspaceId}/projects/${projectId}`;
   const t = translations.en;
-  const [moved, setMoved] = useState(false);
+  const { moved, setMoved } = useBoardStore();
+
+  useEffect(() => () => setMoved(false), [path, setMoved]);
+
   const viewTab = "flex h-[30px] items-center gap-[6px] rounded-[5px] border-b-0 px-[10px] pb-[0px] text-[12px] data-[state=active]:bg-primary/10 data-[state=active]:text-primary";
   const column = "flex min-h-[682px] min-w-0 flex-col gap-[8px] rounded-[8px] bg-muted p-[5px]";
   const meta = "text-[12px] text-muted-foreground";

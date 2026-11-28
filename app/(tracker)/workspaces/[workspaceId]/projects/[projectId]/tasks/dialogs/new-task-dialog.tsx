@@ -5,34 +5,45 @@ import { useParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api, errorText } from "@/lib/api";
+import { api } from "@/lib/api";
 import translations from "../page-translations.json";
 
 const copy = translations.en.newTask;
-const titleSchema = z.object({
-  title: z.string().trim().min(1, copy.titleRequired).max(500, copy.titleTooLong),
+const messages = translations.tg.newTask;
+const formSchema = z.object({
+  title: z.string().trim().min(1, messages.titleRequired).max(500, messages.titleTooLong),
+  project: z.string(),
+  status: z.string(),
 });
 const projectIdSchema = z.uuid();
 
 type Project = { id: string; name: string; identifier: string; is_archived: boolean };
 type ProjectStatus = { id: string; name: string; is_default: boolean };
 
-async function loadProjects(workspacePath: string, signal: AbortSignal) {
+async function getProjects(workspacePath: string, signal: AbortSignal) {
   const { data } = await api.get<Project[]>(`${workspacePath}/projects`, { signal });
-  return data.filter((project) => !project.is_archived);
+  return data;
 }
 
-async function loadStatuses(projectPath: string, signal: AbortSignal) {
+async function getStates(projectPath: string, signal: AbortSignal) {
   const { data } = await api.get<ProjectStatus[]>(`${projectPath}/states`, { signal });
   return data;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const status = isAxiosError(error) ? error.response?.status : undefined;
+  if (status === 401) return messages.signInError;
+  if (status === 403) return messages.accessError;
+  return fallback;
 }
 
 export default function NewTaskDialog() {
@@ -41,16 +52,17 @@ export default function NewTaskDialog() {
   const routeProject = projectIdSchema.safeParse(projectId).data;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const { register, handleSubmit, reset, formState } = useForm({
-    resolver: zodResolver(titleSchema),
-    defaultValues: { title: "" },
+  const { register, control, handleSubmit, reset, setValue, formState } = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: { title: "", project: "", status: "" },
   });
+  const selectedProject = useWatch({ control, name: "project" });
+  const selectedStatus = useWatch({ control, name: "status" });
 
   const projects = useQuery({
-    queryKey: ["new-task-projects", workspaceId],
-    queryFn: ({ signal }) => loadProjects(workspacePath, signal),
+    queryKey: ["projects", workspaceId],
+    queryFn: ({ signal }) => getProjects(workspacePath, signal),
+    select: (data) => data.filter((el) => !el.is_archived),
     enabled: open && !routeProject,
     retry: false,
   });
@@ -59,23 +71,23 @@ export default function NewTaskDialog() {
   const project = routeProject ?? (selectedProject || onlyProject);
   const projectPath = `${workspacePath}/projects/${encodeURIComponent(project)}`;
   const statuses = useQuery({
-    queryKey: ["new-task-statuses", workspaceId, project],
-    queryFn: ({ signal }) => loadStatuses(projectPath, signal),
+    queryKey: ["states", workspaceId, project],
+    queryFn: ({ signal }) => getStates(projectPath, signal),
     enabled: open && !!project,
     retry: false,
   });
-  const createTask = useMutation({
+  const postIssue = useMutation({
     mutationFn: async (values: { title: string; state_id: string }) => {
       const { data } = await api.post<{ title: string }>(`${projectPath}/issues`, values);
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-tasks", workspaceId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["issues", workspaceId, project] }),
   });
 
   const statusOptions = statuses.data ?? [];
   const defaultStatus = statusOptions.find((status) => status.is_default) ?? statusOptions[0];
   const status = statusOptions.find((item) => item.id === selectedStatus) ?? defaultStatus;
-  const saving = formState.isSubmitting || createTask.isPending;
+  const saving = formState.isSubmitting || postIssue.isPending;
   const loading = (!routeProject && projects.isPending) || (!!project && statuses.isPending);
   const projectError = routeProject ? null : projects.error;
   const optionError = projectError ?? statuses.error;
@@ -88,21 +100,19 @@ export default function NewTaskDialog() {
     setOpen(nextOpen);
     if (!nextOpen) {
       reset();
-      setSelectedProject("");
-      setSelectedStatus("");
-      createTask.reset();
+      postIssue.reset();
     }
   }
 
   function changeProject(value: string) {
-    setSelectedProject(value);
-    setSelectedStatus("");
-    createTask.reset();
+    setValue("project", value);
+    setValue("status", "");
+    postIssue.reset();
   }
 
-  async function submit({ title }: z.infer<typeof titleSchema>) {
-    if (!status || optionError || createTask.isPending || createTask.isSuccess) return;
-    await createTask.mutateAsync({ title, state_id: status.id }).catch(() => undefined);
+  async function submit({ title }: z.infer<typeof formSchema>) {
+    if (!status || optionError || postIssue.isPending || postIssue.isSuccess) return;
+    await postIssue.mutateAsync({ title, state_id: status.id }).catch(() => undefined);
   }
 
   return (
@@ -113,9 +123,9 @@ export default function NewTaskDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{copy.newTask}</DialogTitle>
-          <DialogDescription>{createTask.isSuccess ? createTask.data.title : copy.introduction}</DialogDescription>
+          <DialogDescription>{postIssue.isSuccess ? postIssue.data.title : copy.introduction}</DialogDescription>
         </DialogHeader>
-        {createTask.isSuccess ? (
+        {postIssue.isSuccess ? (
           <>
             <p role="status" className="text-[13px] font-medium">{copy.created}</p>
             <DialogFooter>
@@ -146,8 +156,8 @@ export default function NewTaskDialog() {
                 <Select value={project} onValueChange={changeProject} disabled={saving || !projectOptions.length}>
                   <SelectTrigger><SelectValue placeholder={copy.chooseProject} /></SelectTrigger>
                   <SelectContent>
-                    {projectOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>{option.name} ({option.identifier})</SelectItem>
+                    {projectOptions.map((el) => (
+                      <SelectItem key={el.id} value={el.id}>{el.name} ({el.identifier})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -156,10 +166,10 @@ export default function NewTaskDialog() {
             )}
             <div className={field} role="group" aria-label={copy.status}>
               <span>{copy.status}</span>
-              <Select value={status?.id ?? ""} onValueChange={setSelectedStatus} disabled={saving || !status || !!optionError}>
+              <Select value={status?.id ?? ""} onValueChange={(value) => setValue("status", value)} disabled={saving || !status || !!optionError}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((option) => <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>)}
+                  {statusOptions.map((el) => <SelectItem key={el.id} value={el.id}>{el.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               {project && statuses.isSuccess && !statusOptions.length && <p role="status">{copy.noStatuses}</p>}
@@ -167,7 +177,7 @@ export default function NewTaskDialog() {
             {loading && <p role="status" className="text-[13px] text-muted-foreground">{copy.loading}</p>}
             {optionError && (
               <div className={field}>
-                <p role="alert" className={errorClass}>{errorText(optionError)}</p>
+                <p role="alert" className={errorClass}>{getErrorMessage(optionError, messages.optionsError)}</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -180,7 +190,7 @@ export default function NewTaskDialog() {
                 </Button>
               </div>
             )}
-            {createTask.isError && <p role="alert" className={errorClass}>{errorText(createTask.error)}</p>}
+            {postIssue.isError && <p role="alert" className={errorClass}>{getErrorMessage(postIssue.error, messages.createError)}</p>}
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline" size="sm" disabled={saving}>{copy.cancel}</Button>

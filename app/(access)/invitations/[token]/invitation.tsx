@@ -68,7 +68,7 @@ export default function InvitationPage() {
               {postAcceptInvite.isPending ? "Accepting..." : "Accept invitation"}
             </Button>
             <Button asChild variant="outline" className="w-full">
-              <Link href="/sign-in">{t.signIn}</Link>
+              <Link href={`/sign-in?next=/invitations/${token}`}>{t.signIn}</Link>
             </Button>
             <Button asChild variant="outline" className="w-full">
               <Link href={`/sign-up?invite=${token}`}>{t.createAccount}</Link>

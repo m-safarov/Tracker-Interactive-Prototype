@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { Circle, CircleCheck, CircleDashed, CircleX, Contrast, Minus, MoreHorizontal, OctagonExclamationPoint, Plus, SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +31,8 @@ type Issue = {
   priority: "none" | "low" | "medium" | "high" | "urgent";
   due_date: string | null;
   completed_at: string | null;
-  labels: { label: { id: string; name: string; color: string } }[];
-  assignees: { user: { id: string; display_name: string; avatar_url: string | null } }[];
+  labels: { label?: { id: string; name: string; color: string } }[];
+  assignees: { user?: { id: string; display_name: string; avatar_url: string | null } }[];
 };
 type IssuePage = { data: Issue[]; next_cursor: string | null };
 type Task = Issue & { taskKey: string; state?: ProjectState };
@@ -54,8 +54,7 @@ const priorities = {
   urgent: { icon: OctagonExclamationPoint, color: "#DC2626" },
 } satisfies Record<Issue["priority"], { icon: LucideIcon; color?: string }>;
 
-async function loadProjectTasks(workspacePath: string, project: Project, userId: string, filter: TaskFilter, signal: AbortSignal) {
-  const projectPath = `${workspacePath}/projects/${encodeURIComponent(project.id)}`;
+async function getIssues(projectPath: string, userId: string, filter: TaskFilter, signal: AbortSignal) {
   const issues: Issue[] = [];
   let cursor: string | null = null;
 
@@ -68,27 +67,12 @@ async function loadProjectTasks(workspacePath: string, project: Project, userId:
     cursor = data.next_cursor;
   } while (cursor);
 
-  if (!issues.length) return [];
-
-  const { data: states } = await api.get<ProjectState[]>(`${projectPath}/states`, { signal });
-  return issues.map((issue) => ({
-    ...issue,
-    taskKey: `${project.identifier}-${issue.sequence_id}`,
-    state: states.find((state) => state.id === issue.state_id),
-  }));
+  return issues;
 }
 
-async function loadMyTasks(workspacePath: string, filter: TaskFilter, signal: AbortSignal) {
-  const [account, workspace, projects] = await Promise.all([
-    api.get<{ id: string }>("/auth/me", { signal }),
-    api.get<{ name: string }>(workspacePath, { signal }),
-    api.get<Project[]>(`${workspacePath}/projects`, { signal }),
-  ]);
-  const tasks = await Promise.all(projects.data.map((project) =>
-    loadProjectTasks(workspacePath, project, account.data.id, filter, signal),
-  ));
-
-  return { workspaceName: workspace.data.name, tasks: tasks.flat() };
+async function getStates(projectPath: string, signal: AbortSignal) {
+  const { data } = await api.get<ProjectState[]>(`${projectPath}/states`, { signal });
+  return data;
 }
 
 function groupTasks(tasks: Task[]) {
@@ -113,17 +97,57 @@ export default function MyTasksPage() {
   const path = `${workspacePath}/my-tasks`;
   const view = pathname.endsWith("/created") ? "created" : "assigned";
   const filter = view === "created" ? "created_by" : "assignee";
-  const myTasks = useQuery({
-    queryKey: ["my-tasks", workspaceId, view],
-    queryFn: ({ signal }) => loadMyTasks(workspacePath, filter, signal),
+  const account = useQuery({
+    queryKey: ["current-account"],
+    queryFn: async ({ signal }) => (await api.get<{ id: string }>("/auth/me", { signal })).data,
     gcTime: 0,
     retry: false,
   });
+  const workspace = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { signal })).data,
+    retry: false,
+  });
+  const projects = useQuery({
+    queryKey: ["projects", workspaceId],
+    queryFn: async ({ signal }) => (await api.get<Project[]>(`${workspacePath}/projects`, { signal })).data,
+    retry: false,
+  });
+  const userId = account.data?.id;
+  const projectList = projects.data ?? [];
+  const issueQueries = useQueries({
+    queries: userId ? projectList.map((el) => ({
+      queryKey: ["issues", workspaceId, el.id, filter, userId],
+      queryFn: ({ signal }) => getIssues(`${workspacePath}/projects/${encodeURIComponent(el.id)}`, userId, filter, signal),
+      retry: false,
+    })) : [],
+  });
+  const stateQueries = useQueries({
+    queries: projectList.map((el, index) => ({
+      queryKey: ["states", workspaceId, el.id],
+      queryFn: ({ signal }) => getStates(`${workspacePath}/projects/${encodeURIComponent(el.id)}`, signal),
+      enabled: !!issueQueries[index]?.data?.length,
+      retry: false,
+    })),
+  });
   const t = view === "created" ? createdTranslations.en : translations.en;
-  const groups = groupTasks(myTasks.data?.tasks ?? []);
-  const sessionExpired = isAxiosError(myTasks.error) && myTasks.error.response?.status === 401;
+  const queries = [account, workspace, projects, ...issueQueries, ...stateQueries.filter((el, index) => issueQueries[index]?.data?.length)];
+  const failedQueries = queries.filter((el) => el.isError);
+  const error = failedQueries[0]?.error;
+  const sessionExpired = isAxiosError(error) && error.response?.status === 401;
+  const pending = queries.some((el) => el.isPending);
+  const tasks = projectList.flatMap((el, index) => {
+    const identifier = el.identifier;
+    const states = stateQueries[index]?.data ?? [];
+    return (issueQueries[index]?.data ?? []).map((el) => ({
+      ...el,
+      taskKey: `${identifier}-${el.sequence_id}`,
+      state: states.find((state) => state.id === el.state_id),
+    }));
+  });
+  const groups = groupTasks(tasks);
   const today = new Date();
-  const startOfToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const tabLink = "flex h-[39px] items-center px-[2px] pb-[0px] data-[state=active]:text-primary";
   const columns = "grid grid-cols-[16px_61px_minmax(0,1fr)_232px_106px_70px_14px] items-center gap-[8px] px-[24px]";
   const row = `${columns} h-[36px] border-b border-border text-[13px] hover:bg-muted/50`;
@@ -137,6 +161,7 @@ export default function MyTasksPage() {
   }
 
   function renderLabel({ label }: Issue["labels"][number]) {
+    if (!label) return null;
     return (
       <span key={label.id} className={tint} style={{ backgroundColor: label.color + "1A" }}>
         <Badge variant="secondary" className="h-[19px] px-[6px]">{label.name}</Badge>
@@ -145,6 +170,7 @@ export default function MyTasksPage() {
   }
 
   function renderAssignee({ user }: Issue["assignees"][number]) {
+    if (!user) return null;
     return (
       <span key={user.id} title={user.display_name}>
         <Avatar name={user.display_name} src={user.avatar_url ?? undefined} className="size-[20px] text-[8px]" />
@@ -162,11 +188,11 @@ export default function MyTasksPage() {
         {mark(priority.icon, priority.color)}
         <span className={meta}>{task.taskKey}</span>
         <div className="min-w-0 truncate">{task.title}</div>
-        <div className={badges}>{task.labels.map(renderLabel)}</div>
+        <div className={badges}>{task.labels.map((el) => renderLabel(el))}</div>
         <span className={overdue ? "text-[12px] text-destructive" : meta}>
-          {date?.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) ?? "—"}
+          {date?.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) ?? "—"}
         </span>
-        <div className={avatars}>{task.assignees.map(renderAssignee)}</div>
+        <div className={avatars}>{task.assignees.map((el) => renderAssignee(el))}</div>
         <Button type="button" variant="ghost" size="icon-sm" className="-ml-[7px]" aria-label={t.menu} disabled><MoreHorizontal /></Button>
       </div>
     );
@@ -181,7 +207,7 @@ export default function MyTasksPage() {
           <Badge variant="outline" className="ml-[16px] h-[20px] px-[6px]">{tasks.length}</Badge>
           <Button type="button" variant="ghost" size="icon-sm" className="ml-auto -mr-[8px]" aria-label={t.addTask} disabled><Plus /></Button>
         </div>
-        {tasks.map(renderTask)}
+        {tasks.map((el) => renderTask(el))}
       </section>
     );
   }
@@ -190,7 +216,7 @@ export default function MyTasksPage() {
     <div className="flex h-dvh overflow-hidden">
       <WorkspaceSidebar active="my-tasks" />
       <main className="min-w-0 flex-1 overflow-auto">
-        <PageHeading crumbs={myTasks.data ? [myTasks.data.workspaceName, t.myTasks] : [t.myTasks]} title={t.myTasks} />
+        <PageHeading crumbs={workspace.data ? [workspace.data.name, t.myTasks] : [t.myTasks]} title={t.myTasks} />
         <Tabs value={view}>
           <TabsList className="h-[40px] items-end gap-[25px] px-[24px]">
             <TabsTrigger value="assigned" asChild className={tabLink}>
@@ -205,23 +231,29 @@ export default function MyTasksPage() {
           <div className={`${columns} h-[34px] ${meta}`}>
             <span /><span /><span>{t.title}</span><span>{t.labels}</span><span>{t.dueDate}</span><span>{t.assignees}</span><span />
           </div>
-          {myTasks.isPending && <p role="status" className="px-[24px] py-[16px]">{t.loading}</p>}
-          {myTasks.isError && (
+          {pending && !error && <p role="status" className="px-[24px] py-[16px]">{t.loading}</p>}
+          {error && (
             <div className="flex flex-col items-start gap-[8px] px-[24px] py-[16px]">
-              <p role="alert" className="text-destructive">{errorText(myTasks.error)}</p>
+              <p role="alert" className="text-destructive">{errorText(error)}</p>
               {sessionExpired ? (
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/sign-in?next=${encodeURIComponent(pathname)}`}>{t.signIn}</Link>
                 </Button>
               ) : (
-                <Button type="button" variant="outline" size="sm" onClick={() => myTasks.refetch()} disabled={myTasks.isFetching}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => failedQueries.forEach((el) => void el.refetch())}
+                  disabled={failedQueries.some((el) => el.isFetching)}
+                >
                   {t.retry}
                 </Button>
               )}
             </div>
           )}
-          {myTasks.isSuccess && !groups.length && <p role="status" className="px-[24px] py-[16px]">{t.empty}</p>}
-          {myTasks.isSuccess && groups.map(renderGroup)}
+          {!pending && !error && !groups.length && <p role="status" className="px-[24px] py-[16px]">{t.empty}</p>}
+          {!pending && !error && groups.map((el) => renderGroup(el))}
         </div>
       </main>
     </div>

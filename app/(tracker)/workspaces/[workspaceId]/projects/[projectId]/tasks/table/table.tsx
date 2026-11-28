@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { CalendarDays, Check, Circle, CircleCheck, CircleDashed, CircleX, Columns3, Contrast, List, ListFilter, Minus, OctagonExclamationPoint, Search, SignalHigh, SignalLow, SignalMedium, SlidersHorizontal, TableProperties, type LucideIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { useTableStore, type TaskStatus } from "@/app/(tracker)/workspaces/store/table-store";
 import NewTaskDialog from "../dialogs/new-task-dialog";
 import translations from "./page-translations.json";
 
-const taskStatuses = ["backlog", "todo", "inProgress", "inReview", "done", "cancelled"] as const;
-type TaskStatus = (typeof taskStatuses)[number];
+const taskStatuses: TaskStatus[] = ["backlog", "todo", "inProgress", "inReview", "done", "cancelled"];
 
 interface TaskRow {
   taskKey: string;
@@ -47,8 +47,10 @@ function getVisibleTasks(tasks: TaskRow[], search: string, status: TaskStatus | 
 export default function TablePage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const path = `/workspaces/${workspaceId}/projects/${projectId}`;
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | null>(null);
+  const { search, statusFilter, setSearch, toggleStatus, reset } = useTableStore();
+
+  useEffect(() => () => reset(), [path, reset]);
+
   const t = translations.en;
   const viewTab = "flex h-[30px] items-center gap-[6px] rounded-[5px] border-b-0 px-[10px] pb-[0px] text-[12px] data-[state=active]:bg-primary/10 data-[state=active]:text-primary";
   const header = "h-[36px] whitespace-nowrap px-[8px]";
@@ -76,10 +78,6 @@ export default function TablePage() {
         <Avatar name={name} className="size-[20px] text-[8px]" />
       </span>
     );
-  }
-
-  function toggleStatus(status: TaskStatus) {
-    setStatusFilter((current) => current === status ? null : status);
   }
 
   function renderTaskRow({ taskKey, title, status, statusIcon, priority, start, due, estimate, overdue, tags, people }: TaskRow) {
@@ -293,10 +291,10 @@ export default function TablePage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {taskStatuses.map((status) => (
-                  <DropdownMenuItem key={status} onSelect={() => toggleStatus(status)}>
-                    {t[status]}
-                    {status === statusFilter && <Check className="ml-auto" aria-hidden="true" />}
+                {taskStatuses.map((el) => (
+                  <DropdownMenuItem key={el} onSelect={() => toggleStatus(el)}>
+                    {t[el]}
+                    {el === statusFilter && <Check className="ml-auto" aria-hidden="true" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -320,7 +318,7 @@ export default function TablePage() {
               <TableHead className={`${header} pr-[24px]`}>{t.updated}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>{visibleTasks.map(renderTaskRow)}</TableBody>
+          <TableBody>{visibleTasks.map((el) => renderTaskRow(el))}</TableBody>
         </Table>
         <p
           role="status"

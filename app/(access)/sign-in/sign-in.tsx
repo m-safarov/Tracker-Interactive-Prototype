@@ -14,7 +14,7 @@ import { api, errorText } from "@/lib/api";
 import translations from "./page-translations.json";
 
 const loginResponse = z.object({
-  destination: z.string().regex(/^\/(?:profile(?:[?#]|$)|workspaces\/)/),
+  destination: z.string().regex(/^\/(?:profile(?:[?#]|$)|workspaces\/|invitations\/)/),
 });
 
 export default function SignInPage() {
@@ -27,7 +27,7 @@ export default function SignInPage() {
     networkMode: "always",
     gcTime: 0,
     mutationFn: async (credentials: LoginBody) => {
-      const { data } = await api.post<unknown>("/auth/login", credentials);
+      const { data } = await api.post<unknown>("/auth/login", credentials, { baseURL: "/api" });
       const result = loginResponse.safeParse(data);
       if (!result.success) throw new Error();
       return result.data.destination;

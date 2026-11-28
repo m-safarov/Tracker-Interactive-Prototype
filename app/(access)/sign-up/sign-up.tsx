@@ -30,7 +30,7 @@ export default function SignUpPage() {
     networkMode: "always",
     gcTime: 0,
     mutationFn: async (account: RegisterBody) => {
-      const { data } = await api.post<unknown>("/auth/register", account);
+      const { data } = await api.post<unknown>("/auth/register", account, { baseURL: "/api" });
       const result = registerResponse.safeParse(data);
       if (!result.success) throw new Error();
       return result.data.destination;

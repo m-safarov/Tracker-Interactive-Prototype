@@ -19,16 +19,23 @@ async function forwardWorkspace(
   request: NextRequest,
   { params }: { params: Promise<{ segments?: string[] }> },
 ) {
-  const token = request.cookies.get(accessCookie)?.value;
-  if (!token) return failure(401, "Sign in to access your workspace.");
-
   const method = request.method === "HEAD" ? "GET" : request.method;
   const { segments = [] } = await params;
   if (segments.some((segment) => !segment || segment === "." || segment === ".." || /[/\\]/.test(segment) || segment.includes("\0"))) {
-    return failure(400, "Invalid workspace path.");
+    return failure(400, "Invalid API path.");
   }
-  const path = ["/workspaces", ...segments.map(encodeURIComponent)].join("/");
-  const needsSlash = request.nextUrl.pathname.endsWith("/") || collectionPaths.some((pattern) => pattern.test(path));
+
+  const invite = segments[0] === "_invites";
+  const publicInvite = invite && method === "GET" && segments.length === 2;
+  const acceptInvite = invite && method === "POST" && segments.length === 3 && segments[2] === "accept";
+  if (invite && !publicInvite && !acceptInvite) return failure(404, "Unknown invitation request.");
+
+  const token = request.cookies.get(accessCookie)?.value;
+  if (!publicInvite && !token) return failure(401, "Sign in to continue.");
+
+  const parts = invite ? segments.slice(1) : segments;
+  const path = [invite ? "/invites" : "/workspaces", ...parts.map(encodeURIComponent)].join("/");
+  const needsSlash = !invite && (request.nextUrl.pathname.endsWith("/") || collectionPaths.some((pattern) => pattern.test(path)));
 
   let body: string | undefined;
   if (method !== "GET") {
@@ -47,7 +54,7 @@ async function forwardWorkspace(
       url: path + (needsSlash ? "/" : "") + request.nextUrl.search,
       data: body || undefined,
       headers: {
-        Authorization: "Bearer " + token,
+        ...(!publicInvite && token ? { Authorization: "Bearer " + token } : {}),
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       signal: request.signal,

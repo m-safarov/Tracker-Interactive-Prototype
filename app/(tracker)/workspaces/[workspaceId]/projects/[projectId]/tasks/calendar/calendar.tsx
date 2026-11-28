@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, Columns3, List, ListFilter, Search, SlidersHorizontal, TableProperties } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeading from "@/components/page-heading";
 import WorkspaceSidebar from "@/components/workspace-sidebar";
+import { useCalendarStore } from "@/app/(tracker)/workspaces/store/calendar-store";
 import NewTaskDialog from "../dialogs/new-task-dialog";
 import translations from "./page-translations.json";
 
@@ -39,15 +40,15 @@ function getCalendarDays(year: number, month: number) {
 export default function CalendarPage() {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const path = `/workspaces/${workspaceId}/projects/${projectId}`;
-  const [today, setToday] = useState<Date | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
-  const [search, setSearch] = useState("");
+  const { today, selectedMonth, search, setToday, setSearch, moveMonth, goToToday, reset } = useCalendarStore();
 
   useEffect(() => {
-    // Санаи маҳаллиро аз браузер мегирем, чун минтақаи вақти сервер метавонад дигар бошад.
     const frame = requestAnimationFrame(() => setToday(new Date()));
-    return () => cancelAnimationFrame(frame);
-  }, []);
+    return () => {
+      cancelAnimationFrame(frame);
+      reset();
+    };
+  }, [path, reset, setToday]);
 
   const visibleMonth = selectedMonth ?? today ?? demoMonth;
   const year = visibleMonth.getFullYear();
@@ -59,18 +60,6 @@ export default function CalendarPage() {
   const grid = "grid grid-cols-[repeat(7,minmax(0,1fr))]";
   const weekday = "px-[10px] text-[12px] text-muted-foreground";
   const cell = "min-h-[117px] min-w-0 border-r border-b border-border p-[9px] text-[12px]";
-
-  function moveMonth(direction: -1 | 1) {
-    setSelectedMonth((current) => {
-      const date = current ?? visibleMonth;
-      return new Date(date.getFullYear(), date.getMonth() + direction, 1);
-    });
-  }
-
-  function goToToday() {
-    setToday(new Date());
-    setSelectedMonth(null);
-  }
 
   function renderDay(day: Date) {
     const date = day.getDate();
@@ -146,8 +135,8 @@ export default function CalendarPage() {
             <h2 className="text-[16px] font-semibold" aria-live="polite">{monthTitle}</h2>
             <div className="flex items-center gap-[10px]">
               <Button type="button" variant="outline" size="sm" className="w-[76px]" onClick={goToToday}>{t.today}</Button>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.previous} onClick={() => moveMonth(-1)}><ArrowLeft /></Button>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.next} onClick={() => moveMonth(1)}><ArrowRight /></Button>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.previous} onClick={() => moveMonth(-1, demoMonth)}><ArrowLeft /></Button>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t.next} onClick={() => moveMonth(1, demoMonth)}><ArrowRight /></Button>
             </div>
           </div>
           <div className={`${grid} mb-[4px]`}>
@@ -156,7 +145,7 @@ export default function CalendarPage() {
             <span className={weekday}>{t.sunday}</span>
           </div>
           <div className={`${grid} border-t border-l border-border`}>
-            {days.map(renderDay)}
+            {days.map((el) => renderDay(el))}
           </div>
         </section>
       </main>
