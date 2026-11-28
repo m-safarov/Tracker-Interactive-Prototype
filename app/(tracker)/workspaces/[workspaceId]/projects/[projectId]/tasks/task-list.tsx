@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CalendarDays, Circle, CircleCheck, CircleDashed, CircleX, Columns3, Contrast, List, ListFilter, Minus, MoreHorizontal, OctagonExclamationPoint, Plus, Search, SignalHigh, SignalLow, SignalMedium, SlidersHorizontal, TableProperties, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +72,10 @@ type ViewProps = {
 };
 
 const projectIdSchema = z.uuid();
+const projectFormSchema = z.object({
+  name: z.string().trim().min(1, "Номи проектро нависед.").max(100, "Ном то 100 аломат бошад."),
+  identifier: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{1,10}$/, "Аз 1 то 10 ҳарфи лотинӣ ё рақам нависед."),
+});
 const proxyOptions = { baseURL: "/api" };
 
 async function getIssues(path: string, signal: AbortSignal) {
@@ -99,24 +105,31 @@ function mark(Icon: LucideIcon, color?: string) {
 export default function TaskListPage({ view = "list", children }: ViewProps) {
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const workspacePath = "/workspaces/" + encodeURIComponent(workspaceId);
-  const path = workspacePath + "/projects/" + encodeURIComponent(projectId);
+  const projectsPath = workspacePath + "/projects";
+  const path = projectsPath + "/" + encodeURIComponent(projectId);
   const hasProjectId = projectIdSchema.safeParse(projectId).success;
+  const projectsKey = ["projects", workspaceId];
   const issueKey = ["issues", workspaceId, projectId];
   const taskPath = path + "/tasks";
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showDates, setShowDates] = useState(true);
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(projectFormSchema),
+    defaultValues: { name: "", identifier: "" },
+  });
 
   const workspace = useQuery({
     queryKey: ["workspace", workspaceId],
     queryFn: async ({ signal }) => (await api.get<{ name: string }>(workspacePath, { ...proxyOptions, signal })).data,
   });
   const projects = useQuery({
-    queryKey: ["projects", workspaceId],
+    queryKey: projectsKey,
     queryFn: async ({ signal }) => {
-      const { data } = await api.get<Project[]>(workspacePath + "/projects", { ...proxyOptions, signal });
+      const { data } = await api.get<Project[]>(projectsPath, { ...proxyOptions, signal });
       if (!Array.isArray(data)) throw new Error("Could not read the workspace projects.");
       return data;
     },
@@ -140,6 +153,16 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
     queryKey: issueKey,
     queryFn: ({ signal }) => getIssues(path, signal),
     enabled: hasProjectId,
+  });
+  const postProject = useMutation({
+    mutationFn: async (values: z.infer<typeof projectFormSchema>) => {
+      const { data } = await api.post<Project>(projectsPath, values, proxyOptions);
+      return data;
+    },
+    onSuccess: (createdProject) => {
+      void queryClient.invalidateQueries({ queryKey: projectsKey });
+      router.replace(projectTasksHref(createdProject.id));
+    },
   });
   const editIssue = useMutation({
     mutationFn: ({ id, changes }: { id: string; changes: IssueChanges }) =>
@@ -176,6 +199,12 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
     : "grid grid-cols-[16px_61px_minmax(0,1fr)_24px] items-center gap-[8px] px-[24px]";
   const row = columns + " min-h-[36px] border-b border-border text-[13px] hover:bg-muted/50";
   const meta = "text-[12px] text-muted-foreground";
+
+  function projectTasksHref(id: string) {
+    const href = projectsPath + "/" + encodeURIComponent(id) + "/tasks";
+    return view === "list" ? href : href + "/" + view;
+  }
+
   function saveIssue(id: string, changes: IssueChanges) {
     editIssue.mutate({ id, changes });
   }
@@ -242,62 +271,62 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
       <WorkspaceSidebar active="tasks" />
       <main className="min-w-0 flex-1 overflow-auto">
         <PageHeading crumbs={[workspace.data?.name, project.data?.name, t.tasks].filter((el): el is string => !!el)} title={project.data?.name ?? t.tasks}>
-          {hasProjectId && <NewTaskDialog />}
+          {hasProjectId || activeProjects.length > 0 ? <NewTaskDialog /> : (
+            <Button type="button" size="sm" className="w-[120px]" disabled><Plus />{t.newTask.newTask}</Button>
+          )}
         </PageHeading>
 
-        {hasProjectId && (
-          <div className="flex min-h-[36px] flex-wrap items-center justify-between gap-[8px] border-b border-border px-[22px] pb-[8px]">
-            <Tabs value={view}>
-              <TabsList className="gap-[4px] border-b-0">
-                <TabsTrigger value="list" asChild className={viewTab}>
-                  <Link href={path + "/tasks"}><List className="size-[14px]" aria-hidden="true" />{t.list}</Link>
-                </TabsTrigger>
-                <TabsTrigger value="board" asChild className={viewTab}>
-                  <Link href={path + "/tasks/board"}><Columns3 className="size-[14px]" aria-hidden="true" />{t.board}</Link>
-                </TabsTrigger>
-                <TabsTrigger value="table" asChild className={viewTab}>
-                  <Link href={path + "/tasks/table"}><TableProperties className="size-[14px]" aria-hidden="true" />{t.table}</Link>
-                </TabsTrigger>
-                <TabsTrigger value="calendar" asChild className={viewTab}>
-                  <Link href={path + "/tasks/calendar"}><CalendarDays className="size-[14px]" aria-hidden="true" />{t.calendar}</Link>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-[8px]">
-              <div className="relative">
-                <Label htmlFor="task-search" className="sr-only">{t.search}</Label>
-                <Search className="pointer-events-none absolute top-[8px] left-[9px] size-[15px] text-muted-foreground" aria-hidden="true" />
-                <Input id="task-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t.search} className="h-[32px] w-[144px] pl-[30px]" />
-              </div>
+        <div className="flex min-h-[36px] flex-wrap items-center justify-between gap-[8px] border-b border-border px-[22px] pb-[8px]">
+          <Tabs value={view}>
+            <TabsList className="gap-[4px] border-b-0">
+              <TabsTrigger value="list" asChild className={viewTab}>
+                <Link href={path + "/tasks"}><List className="size-[14px]" aria-hidden="true" />{t.list}</Link>
+              </TabsTrigger>
+              <TabsTrigger value="board" asChild className={viewTab}>
+                <Link href={path + "/tasks/board"}><Columns3 className="size-[14px]" aria-hidden="true" />{t.board}</Link>
+              </TabsTrigger>
+              <TabsTrigger value="table" asChild className={viewTab}>
+                <Link href={path + "/tasks/table"}><TableProperties className="size-[14px]" aria-hidden="true" />{t.table}</Link>
+              </TabsTrigger>
+              <TabsTrigger value="calendar" asChild className={viewTab}>
+                <Link href={path + "/tasks/calendar"}><CalendarDays className="size-[14px]" aria-hidden="true" />{t.calendar}</Link>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex items-center gap-[8px]">
+            <div className="relative">
+              <Label htmlFor="task-search" className="sr-only">{t.search}</Label>
+              <Search className="pointer-events-none absolute top-[8px] left-[9px] size-[15px] text-muted-foreground" aria-hidden="true" />
+              <Input id="task-search" type="search" value={search} disabled={!hasProjectId} onChange={(event) => setSearch(event.target.value)}
+                placeholder={t.search} className="h-[32px] w-[144px] pl-[30px]" />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="min-w-[97px]" disabled={!hasProjectId || !stateList.length}>
+                  <ListFilter />{selectedState?.name ?? t.filters}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => setStatusFilter("")}>All statuses</DropdownMenuItem>
+                {stateList.map((el) => (
+                  <DropdownMenuItem key={el.id} onSelect={() => setStatusFilter(el.id)}>{el.name}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {view !== "calendar" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className="min-w-[97px]" disabled={!stateList.length}>
-                    <ListFilter />{selectedState?.name ?? t.filters}
-                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="w-[104px]" disabled={!hasProjectId}><SlidersHorizontal />{t.display}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => setStatusFilter("")}>All statuses</DropdownMenuItem>
-                  {stateList.map((el) => (
-                    <DropdownMenuItem key={el.id} onSelect={() => setStatusFilter(el.id)}>{el.name}</DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem onSelect={() => setShowDates((visible) => !visible)}>
+                    {showDates ? "Hide dates" : "Show dates"}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {view !== "calendar" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" className="w-[104px]"><SlidersHorizontal />{t.display}</Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => setShowDates((visible) => !visible)}>
-                      {showDates ? "Hide dates" : "Show dates"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
         {!queryError && loading && <p role="status" className="px-[24px] py-[16px]">Loading…</p>}
         {queryError && (
@@ -315,11 +344,30 @@ export default function TaskListPage({ view = "list", children }: ViewProps) {
                 <h2 className="text-[14px] font-semibold">{t.newTask.chooseProject}</h2>
                 {activeProjects.map((el) => (
                   <Button key={el.id} variant="outline" size="sm" asChild>
-                    <Link href={workspacePath + "/projects/" + encodeURIComponent(el.id) + "/tasks" + (view === "list" ? "" : "/" + view)}>{el.name}</Link>
+                    <Link href={projectTasksHref(el.id)}>{el.name}</Link>
                   </Button>
                 ))}
               </>
-            ) : <p role="status" className={meta}>{t.newTask.noProjects}</p>}
+            ) : (
+              <form className="flex w-full max-w-[360px] flex-col gap-[12px]"
+                onSubmit={handleSubmit((values) => postProject.mutate(values))}>
+                <p role="status" className={meta}>{t.newTask.noProjects}</p>
+                <div className="flex flex-col gap-[6px]">
+                  <Label htmlFor="first-project-name">Project name</Label>
+                  <Input id="first-project-name" {...register("name")} />
+                  {errors.name && <p role="alert" className="text-[12px] text-destructive">{errors.name.message}</p>}
+                </div>
+                <div className="flex flex-col gap-[6px]">
+                  <Label htmlFor="first-project-identifier">Project identifier</Label>
+                  <Input id="first-project-identifier" autoCapitalize="characters" {...register("identifier")} />
+                  {errors.identifier && <p role="alert" className="text-[12px] text-destructive">{errors.identifier.message}</p>}
+                </div>
+                {postProject.error && <p role="alert" className="text-[12px] text-destructive">{errorText(postProject.error)}</p>}
+                <Button type="submit" size="sm" className="self-start" disabled={postProject.isPending || postProject.isSuccess}>
+                  {postProject.isPending ? "Creating…" : "Create project"}
+                </Button>
+              </form>
+            )}
           </div>
         )}
 

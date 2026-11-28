@@ -193,7 +193,7 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
               <ChevronDown className="ml-auto size-[16px] text-muted-foreground" />
             </Link>
             {projectLinks.map((el) => (
-              <Link key={el.segment} href={projectsHref} className={projectItem}>
+              <Link key={el.segment} href={w && el.segment === "tasks" ? w + "/projects/select/tasks" : projectsHref} className={projectItem}>
                 <el.icon className="size-[16px]" /> {el.label}
               </Link>
             ))}
