@@ -14,7 +14,7 @@ export default function PageHeading({ crumbs, title, children }: PageHeadingProp
     <>
       <div className="flex h-[48px] items-center gap-[6px] border-b border-border px-[24px] text-[13px]">
         {crumbs.map((crumb, index) => (
-          <span key={crumb} className="flex items-center gap-[6px]">
+          <span key={index} className="flex items-center gap-[6px]">
             {index > 0 && <ChevronRight className="size-[12px] text-muted-foreground" />}
             <span className={index === crumbs.length - 1 ? "font-medium" : "text-muted-foreground"}>{crumb}</span>
           </span>

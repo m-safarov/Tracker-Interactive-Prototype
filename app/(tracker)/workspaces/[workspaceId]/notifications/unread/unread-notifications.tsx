@@ -25,6 +25,7 @@ interface Notification {
 const typeText: Record<string, string> = {
   issue_assigned: "assigned a task to you",
   comment_added: "commented on a task",
+  mentioned: "mentioned you",
 };
 
 // Dev 2 — Огоҳиномаҳои хонданашуда. Figma: фреймҳои "Unread notifications" ва "Notifications read" (ҳолати холӣ).
