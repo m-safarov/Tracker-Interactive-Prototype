@@ -1,5 +1,29 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "tracker": "Tracker",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "creatingAccount": "Creating account…"
+  },
+  "tg": {
+    "tracker": "Tracker",
+    "signIn": "Ворид шудан",
+    "createAccount": "Сохтани ҳисоб",
+    "email": "Почтаи электронӣ",
+    "password": "Рамз",
+    "name": "Ном",
+    "creatingAccount": "Ҳисоб сохта шуда истодааст…"
+  },
+  "ru": {
+    "tracker": "Tracker",
+    "signIn": "Войти",
+    "createAccount": "Создать аккаунт",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "name": "Имя",
+    "creatingAccount": "Создание аккаунта…"
+  }
 }

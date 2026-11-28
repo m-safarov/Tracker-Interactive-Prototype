@@ -1,4 +1,5 @@
-// Dev 1 — Вазифаҳои сохтаи ман.
+import MyTasksPage from "../my-tasks";
+
 export default function CreatedByMePage() {
-  return <main />;
+  return <MyTasksPage />;
 }

@@ -1,5 +1,26 @@
 {
-  "en": {},
-  "tg": {},
-  "ru": {}
+  "en": {
+    "settings": "Settings",
+    "title": "Project settings",
+    "general": "General",
+    "members": "Members",
+    "statuses": "Statuses",
+    "labels": "Labels"
+  },
+  "tg": {
+    "settings": "Танзимот",
+    "title": "Танзимоти проект",
+    "general": "Умумӣ",
+    "members": "Аъзо",
+    "statuses": "Статусҳо",
+    "labels": "Нишонаҳо"
+  },
+  "ru": {
+    "settings": "Настройки",
+    "title": "Настройки проекта",
+    "general": "Общие",
+    "members": "Участники",
+    "statuses": "Статусы",
+    "labels": "Метки"
+  }
 }
