@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Boxes, ChevronDown, ChevronRight, FolderKanban, Layers, MoreHorizontal, Plus, RefreshCw, Settings, UserCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api";
+import { postLogout } from "@/features/auth/auth-api";
 
 interface WorkspaceSidebarProps {
   active?: "my-tasks" | "notifications" | "projects" | "tasks" | "cycles" | "modules" | "settings";
@@ -31,6 +32,14 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
   const params = useParams<{ workspaceId?: string; projectId?: string }>();
   const routeWorkspace = params.workspaceId === "undefined" ? undefined : params.workspaceId;
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const logout = useMutation({
+    mutationFn: postLogout,
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/sign-in");
+    },
+  });
   const [projectChoice, setProjectChoice] = useState<{ workspace: string; project: string | null }>();
 
   const workspaces = useQuery({
@@ -213,7 +222,10 @@ export default function WorkspaceSidebar({ active }: WorkspaceSidebarProps) {
               <MoreHorizontal className="size-[16px] text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent><DropdownMenuItem onSelect={() => router.push("/profile")}>Profile</DropdownMenuItem></DropdownMenuContent>
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={() => router.push("/profile")}>Profile</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => { if (!logout.isPending) logout.mutate(); }}>Log out</DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </aside>

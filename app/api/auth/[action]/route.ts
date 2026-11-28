@@ -2,7 +2,7 @@ import axios from "axios";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { changePasswordSchema, loginRequestSchema, registerRequestSchema, updateProfileSchema, type AccountProfile } from "@/features/auth/schema";
-import { accessCookie, backend, clearSessionCookies, safeNextPath, setSessionCookies, workspaceProjects, type TokenPair } from "@/features/auth/server";
+import { accessCookie, backend, clearSessionCookies, refreshCookie, safeNextPath, setSessionCookies, workspaceProjects, type TokenPair } from "@/features/auth/server";
 
 type BackendError = {
   error?: { code?: string; message?: string; details?: { target?: string | string[] } };
@@ -54,6 +54,17 @@ function checkJsonRequest(request: NextRequest) {
 
 export async function POST(request: NextRequest, context: { params: Promise<{ action: string }> }) {
   const { action } = await context.params;
+  if (action === "logout") {
+    const problem = checkJsonRequest(request);
+    if (problem) return problem;
+    if (!request.headers.get("origin")) return failure(403, "This request must come from Tracker.");
+
+    const refreshToken = request.cookies.get(refreshCookie)?.value;
+    const response = new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+    if (refreshToken) await backend.post("/auth/logout", { refresh_token: refreshToken }).catch(() => undefined);
+    clearSessionCookies(request, response);
+    return response;
+  }
   if (action === "change-password") return profileRequest(request, "password");
   if (action !== "login" && action !== "register") {
     return failure(404, "Unknown authentication request.");

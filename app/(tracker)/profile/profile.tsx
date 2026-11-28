@@ -4,9 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "cn";
 import { Globe, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar } from "radix-ui";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   getAuthError,
+  postLogout,
   useChangePasswordMutation,
   useGetProfileQuery,
   useUpdateProfileMutation,
@@ -33,6 +36,7 @@ import {
   type ChangePasswordBody,
   type UpdateProfileBody,
 } from "@/features/auth/schema";
+import { errorText } from "@/lib/api";
 
 import translations from "./page-translations.json";
 
@@ -58,8 +62,16 @@ export default function ProfilePage() {
 }
 
 function ProfileContent() {
-
   const { data: profile, error, isLoading, refetch } = useGetProfileQuery();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const logout = useMutation({
+    mutationFn: postLogout,
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/sign-in");
+    },
+  });
   const { language, theme, isDark } = useProfilePreferences();
   const text = translations[language];
   const needsLogin = error && "status" in error && error.status === 401;
@@ -93,6 +105,9 @@ function ProfileContent() {
           <div className="grid max-w-[592px] gap-5">
             <ProfileForm key={profile.id} profile={profile} text={text} />
             <Preferences theme={theme} isDark={isDark} language={language} text={text} />
+            <Button type="button" variant="outline" className="justify-self-start"
+              disabled={logout.isPending || logout.isSuccess} onClick={() => logout.mutate()}>{text.logOut}</Button>
+            {logout.error && <p role="alert" className="text-sm text-destructive">{errorText(logout.error)}</p>}
           </div>
         )}
         {!profile && error && (

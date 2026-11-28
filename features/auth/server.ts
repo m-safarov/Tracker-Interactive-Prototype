@@ -2,7 +2,7 @@ import axios from "axios";
 import type { NextRequest, NextResponse } from "next/server";
 
 export const accessCookie = "tracker_access";
-const refreshCookie = "tracker_refresh";
+export const refreshCookie = "tracker_refresh";
 
 export const backend = axios.create({
   baseURL: process.env.TRACKER_API_URL || "http://127.0.0.1:3000/api/v1",

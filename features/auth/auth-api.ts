@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { api } from "@/lib/api";
 
 import type { AccountProfile, ChangePasswordBody, LoginBody, RegisterBody, UpdateProfileBody } from "./schema";
 
@@ -68,6 +69,10 @@ export const {
   useUpdateProfileMutation,
   useChangePasswordMutation,
 } = authApi;
+
+export async function postLogout() {
+  await api.post("/auth/logout", {});
+}
 
 export function getAuthError(error: unknown): AuthError {
   if (error && typeof error === "object" && "data" in error) {
