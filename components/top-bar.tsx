@@ -7,11 +7,25 @@ import { usePreferencesStore } from "@/app/(tracker)/workspaces/store/preference
 
 // Select-и забон дар кунҷи рости боло, дар ҳамаи саҳифаҳо.
 export default function TopBar() {
-  const { language, setLanguage } = usePreferencesStore();
+  const { language, setLanguage, theme } = usePreferencesStore();
 
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function applyTheme() {
+      document.documentElement.classList.toggle("dark", theme === "dark" || (theme === "system" && systemTheme.matches));
+    }
+
+    applyTheme();
+    if (theme !== "system") return;
+
+    systemTheme.addEventListener("change", applyTheme);
+    return () => systemTheme.removeEventListener("change", applyTheme);
+  }, [theme]);
 
   return (
     <div className="fixed top-[8px] right-[56px] z-40">

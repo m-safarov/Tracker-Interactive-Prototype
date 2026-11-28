@@ -1,12 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cn } from "cn";
 import { Globe, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "radix-ui";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -43,16 +42,10 @@ import { errorText } from "@/lib/api";
 import translations from "./page-translations.json";
 
 type Language = keyof typeof translations;
-type Theme = "light" | "dark" | "system";
 type ProfileText = typeof translations.en;
 type RequestError = keyof ProfileText["errors"];
 
 const loginUrl = "/login?next=%2Fprofile";
-const themeKey = "tracker-profile-theme";
-const preferenceEvent = "tracker-profile-preferences-changed";
-const systemTheme = "(prefers-color-scheme: dark)";
-const colors = "[--primary:#3b5bdb] [--primary-foreground:#fff] [--radius:6px] [--ring:#3b5bdb]";
-const selectStyle = "h-8 w-full appearance-none rounded-md border border-input bg-background text-center text-sm outline-none focus-visible:border-ring";
 
 export default function ProfilePage() {
   return (
@@ -74,7 +67,6 @@ function ProfileContent() {
     },
   });
   const language = usePreferencesStore((state) => state.language);
-  const { theme, isDark } = useProfilePreferences();
   const text = translations[language];
   const needsLogin = error && "status" in error && error.status === 401;
 
@@ -82,7 +74,7 @@ function ProfileContent() {
     <div
       lang={language}
       translate="no"
-      className={cn("min-h-dvh text-foreground", colors, isDark ? "dark bg-background" : "bg-white")}
+      className="min-h-dvh bg-background text-foreground"
     >
       <header className="border-b">
         <div className="mx-auto flex min-h-12 max-w-[960px] items-center justify-between gap-4 px-4 sm:px-6">
@@ -106,7 +98,7 @@ function ProfileContent() {
         {profile && (
           <div className="grid max-w-[592px] gap-5">
             <ProfileForm key={profile.id} profile={profile} text={text} />
-            <Preferences theme={theme} isDark={isDark} language={language} text={text} />
+            <Preferences language={language} text={text} />
             <Button type="button" variant="outline" className="justify-self-start"
               disabled={logout.isPending || logout.isSuccess} onClick={() => logout.mutate()}>{text.logOut}</Button>
             {logout.error && <p role="alert" className="text-sm text-destructive">{errorText(logout.error)}</p>}
@@ -241,17 +233,13 @@ function ChangePasswordForm({ text }: { text: ProfileText }) {
 }
 
 function Preferences({
-  theme,
-  isDark,
   language,
   text,
 }: {
-  theme: Theme;
-  isDark: boolean;
   language: Language;
   text: ProfileText;
 }) {
-  const setLanguage = usePreferencesStore((state) => state.setLanguage);
+  const { setLanguage, theme, setTheme } = usePreferencesStore();
   return (
     <SettingsCard title={text.preferences}>
       <div className="grid gap-3">
@@ -273,25 +261,24 @@ function Preferences({
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          <label htmlFor="profile-theme" className="text-sm">{text.theme}</label>
-          <select
-            data-slot="native-select"
-            id="profile-theme"
-            className={cn(selectStyle, "w-48 max-w-[55%]")}
-            value={theme}
-            onChange={(event) => savePreference(themeKey, event.target.value)}
-          >
-            <option value="system">{text.system}</option>
-            <option value="light">{text.light}</option>
-            <option value="dark">{text.dark}</option>
-          </select>
+          <span id="profile-theme" className="text-sm">{text.theme}</span>
+          <div role="group" aria-labelledby="profile-theme" className="w-48 max-w-[55%]">
+            <Select value={theme} onValueChange={setTheme}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">{text.system}</SelectItem>
+                <SelectItem value="light">{text.light}</SelectItem>
+                <SelectItem value="dark">{text.dark}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Dialog>
           <DialogTrigger asChild>
             <Button type="button" variant="outline" className="mt-2 justify-self-start">{text.password}</Button>
           </DialogTrigger>
-          <DialogContent lang={language} translate="no" showCloseButton={false} className={cn(colors, isDark && "dark")}>
+          <DialogContent lang={language} translate="no" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle>{text.password}</DialogTitle>
               <DialogDescription>{text.passwordHint}</DialogDescription>
@@ -307,45 +294,6 @@ function Preferences({
       </div>
     </SettingsCard>
   );
-}
-
-function useProfilePreferences() {
-  const savedTheme = useSavedPreference(themeKey);
-  const systemIsDark = useSyncExternalStore(
-    subscribeToPreferences,
-    () => window.matchMedia(systemTheme).matches,
-    () => false,
-  );
-
-  const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
-  const isDark = theme === "dark" || (theme === "system" && systemIsDark);
-
-  return { theme, isDark };
-}
-
-function useSavedPreference(key: string) {
-  return useSyncExternalStore(
-    subscribeToPreferences,
-    () => localStorage.getItem(key),
-    () => null,
-  );
-}
-
-function savePreference(key: string, value: string) {
-  localStorage.setItem(key, value);
-  // The storage event fires in other tabs. Notify this tab too.
-  window.dispatchEvent(new Event(preferenceEvent));
-}
-
-function subscribeToPreferences(update: () => void) {
-  const listeners = new AbortController();
-  const options = { signal: listeners.signal };
-
-  window.matchMedia(systemTheme).addEventListener("change", update, options);
-  window.addEventListener(preferenceEvent, update, options);
-  window.addEventListener("storage", update, options);
-
-  return () => listeners.abort();
 }
 
 function requestError(error: unknown): RequestError {
