@@ -46,7 +46,7 @@ export function safeNextPath(value: string | undefined) {
   const appOrigin = "https://tracker.invalid";
   try {
     const url = new URL(value, appOrigin);
-    const trackerPage = url.pathname === "/profile" || url.pathname.startsWith("/workspaces/");
+    const trackerPage = url.pathname === "/profile" || url.pathname.startsWith("/workspaces/") || url.pathname.startsWith("/invitations/");
     if (url.origin === appOrigin && trackerPage) {
       return url.pathname + url.search + url.hash;
     }
