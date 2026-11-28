@@ -37,7 +37,7 @@ export default function NewCycleDialog({ cycle, onClose }: NewCycleDialogProps) 
   const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
   const p = `/workspaces/${workspaceId}/projects/${projectId}`;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(!!cycle);
+  const [open, setOpen] = useState(cycle !== undefined);
 
   const {
     register,
@@ -87,6 +87,7 @@ export default function NewCycleDialog({ cycle, onClose }: NewCycleDialogProps) 
   });
 
   const saveCycle = cycle ? editCycle : postCycle;
+  const buttonText = cycle ? "Save changes" : "Create cycle";
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -148,7 +149,7 @@ export default function NewCycleDialog({ cycle, onClose }: NewCycleDialogProps) 
               </Button>
             </DialogClose>
             <Button type="submit" disabled={saveCycle.isPending}>
-              {saveCycle.isPending ? "Saving..." : cycle ? "Save changes" : "Create cycle"}
+              {saveCycle.isPending ? "Saving..." : buttonText}
             </Button>
           </DialogFooter>
         </form>
